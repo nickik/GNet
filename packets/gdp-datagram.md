@@ -1,19 +1,29 @@
 # GDP datagram packet
 
-Status: **DRAFT 20-octet encoding; FROZEN field set**
+Status: **DRAFT five-flit encoding; FROZEN field set**
 
-| Offset | Size | Field |
-|---:|---:|---|
-| 0 | 1 | Version |
-| 1 | 1 | Type |
-| 2 | 1 | Hop Limit |
-| 3 | 1 | QoS |
-| 4 | 8 | Source address |
-| 12 | 8 | Destination address |
-| 20 | remaining DLP payload | Payload |
+```text
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |    Version    |      Type     |   Hop Limit   |      QoS      | Flit 0
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                  Source Address [63:32]                       | Flit 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                  Source Address [31:0]                        | Flit 2
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                Destination Address [63:32]                    | Flit 3
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                Destination Address [31:0]                     | Flit 4
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                     GDP payload begins                        | Flit 5
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                              ...                              |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
 
-Total GDP header: **20 octets**. The DLP payload length determines the GDP payload length.
+The GDP header is exactly **five 32-bit flits (20 octets)**. Source and Destination are transmitted most-significant word first. The enclosing DLP Payload Length determines the GDP payload size; the DLP final-flit rule supplies and removes any zero padding.
 
 A source of zero is permitted only during explicitly defined bootstrap exchanges. A normal router decrements Hop Limit before transmission; if the result is zero it discards the packet and may return a control error once such errors are defined.
 
-Version 0 is reserved. The first interoperable version is expected to use Version 1. Type and QoS values are provisional registries. No padding or optional header is implied by this layout.
+Version 0 is reserved. The first interoperable version is expected to use Version 1. Type and QoS values are provisional registries. GDP itself has no padding field or optional header.

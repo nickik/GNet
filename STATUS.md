@@ -27,11 +27,13 @@ This repository is **GNet Draft 0.1**. It is sufficient to discuss interoperable
 - GTS is tunnel-first: destructive close/reset/rebind operations require a Reset ID, while ordinary data omits it; independently configured streams are multiplexed inside a tunnel.
 - Logical service names may resolve to multiple providers, including providers outside the local subnet.
 - GSC signaling is separated from direct endpoint-to-endpoint media/data flow.
+- Wire formats are presented and packaged as 32-bit logical flits; each physical medium may serialize them differently.
 
 ## DRAFT items
 
 - All numeric protocol, service, and message allocations.
-- The 20-octet GDP encoding.
+- The five-flit/20-octet GDP encoding.
+- The common 32-bit flit ordering and DLP padding/CRC packaging rules.
 - DLP frame field widths, frame size, and CRC polynomial.
 - Discovery and address-configuration payload layouts.
 - Transport packet layouts and algorithms.

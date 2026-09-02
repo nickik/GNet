@@ -6,30 +6,44 @@ Discovery is generic: Router, Directory, Terminal Server, and later services use
 
 ## SOLICIT
 
-| Offset | Size | Field | Rules |
-|---:|---:|---|---|
-| 0 | 1 | GCTL version | Draft value 1. |
-| 1 | 1 | Message type | SOLICIT. |
-| 2 | 2 | Flags | Zero until allocated. |
-| 4 | 4 | Transaction ID | Random value selected by requester. |
-| 8 | 2 | Service Type | Registry value. |
-| 10 | 1 | Scope | LINK=0, ROUTER_DOMAIN=1, DISTRICT=2, METRO=3. |
-| 11 | 1 | Reserved | MUST be zero. |
+```text
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |  GCTL Version | Message Type  |             Flags             | Flit 0
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                       Transaction ID                          | Flit 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |         Service Type          |     Scope     |  Reserved = 0 | Flit 2
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
+
+GCTL Version is draft value 1. Message Type is SOLICIT. Flags are zero until allocated. Transaction ID is a random request value. Scope values are LINK=0, ROUTER_DOMAIN=1, DISTRICT=2, and METRO=3.
 
 An unconfigured endpoint may send only `SOLICIT(Router, LINK)` using DLP link-local GCTL. A configured endpoint sends other solicitations as GDP/GCTL. Intermediaries must not expand the requested scope.
 
 ## ADVERTISE
 
-| Offset | Size | Field | Rules |
-|---:|---:|---|---|
-| 0 | 1 | GCTL version | Draft value 1. |
-| 1 | 1 | Message type | ADVERTISE. |
-| 2 | 2 | Flags | Zero until allocated. |
-| 4 | 4 | Transaction ID | Echoes SOLICIT. |
-| 8 | 2 | Service Type | Echoes requested service. |
-| 10 | 2 | Preference | Larger value is preferred; policy may override. |
-| 12 | 8 | Provider address | Zero only when router advertisement precedes address configuration and physical return is used. |
-| 20 | 4 | Lifetime seconds | Zero means do not cache. |
-| 24 | 4 | Capabilities | Service-specific bitmap. |
+```text
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |  GCTL Version | Message Type  |             Flags             | Flit 0
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                       Transaction ID                          | Flit 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |         Service Type          |          Preference           | Flit 2
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                 Provider Address [63:32]                      | Flit 3
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                 Provider Address [31:0]                       | Flit 4
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    Lifetime (seconds)                         | Flit 5
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                       Capabilities                            | Flit 6
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
 
-Total sizes: SOLICIT 12 octets; ADVERTISE 28 octets. These sizes and field widths remain DRAFT.
+Message Type is ADVERTISE. Transaction ID and Service Type echo SOLICIT. Larger Preference values are preferred unless policy overrides them. Provider Address may be zero only for a router advertisement returned by physical-port identity before GDP configuration. Lifetime zero means do not cache. Capabilities is service-specific.
+
+SOLICIT is three flits; ADVERTISE is seven flits. These layouts remain DRAFT.

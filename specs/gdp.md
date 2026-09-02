@@ -14,4 +14,4 @@ GDP is the common routed L3 protocol. Its header is fixed and deliberately conta
 
 GDP MUST NOT acquire length, checksum/hash, fragmentation, options, flow/session ID, sequence numbers, acknowledgments, or encryption metadata. DLP supplies frame length and link CRC; endpoints supply the rest above GDP.
 
-The current byte-aligned 20-octet encoding is defined in [packets/gdp-datagram.md](../packets/gdp-datagram.md). Protocol Type and QoS allocations are DRAFT.
+The current encoding is exactly five 32-bit flits (20 octets) and is defined in [packets/gdp-datagram.md](../packets/gdp-datagram.md). Protocol Type and QoS allocations are DRAFT.

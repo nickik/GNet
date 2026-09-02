@@ -19,6 +19,7 @@ This repository is the working standards tree. It separates settled architectura
 | Area | Document |
 |---|---|
 | Normative status and terminology | [STATUS.md](STATUS.md), [GLOSSARY.md](GLOSSARY.md) |
+| Complete layer overview | [OVERVIEW.md](OVERVIEW.md) |
 | Layer model | [docs/architecture/layer-model.md](docs/architecture/layer-model.md) |
 | Addressing and routing | [docs/architecture/addressing-routing.md](docs/architecture/addressing-routing.md) |
 | Bootstrap and discovery | [docs/architecture/discovery-bootstrap.md](docs/architecture/discovery-bootstrap.md) |
@@ -34,6 +35,7 @@ This repository is the working standards tree. It separates settled architectura
 | Session applications | [specs/gnet-session-control.md](specs/gnet-session-control.md), [specs/gterm.md](specs/gterm.md) |
 | Registries | [registry/protocol-types.md](registry/protocol-types.md), [registry/service-types.md](registry/service-types.md), [registry/control-messages.md](registry/control-messages.md), [registry/session-messages.md](registry/session-messages.md) |
 | Recovered project history | [docs/history/project-chat-audit.md](docs/history/project-chat-audit.md) |
+| 32-bit flit notation | [packets/flit-format.md](packets/flit-format.md) |
 | Unresolved work | [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md) |
 
 ## Status notation

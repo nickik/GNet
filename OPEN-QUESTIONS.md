@@ -8,7 +8,7 @@ Priority meanings: **P0** blocks interoperable prototype work; **P1** blocks a c
 2. **GNET-L electrical layer:** choose line code, clock recovery, voltage/termination, connector pinout, cable category and reach, isolation, grant timing, and failure detection.
 3. **GNET-L scale:** reconcile the simple initial electrical design with 16/32/64-port passive hubs; define when repeating or active stages are mandatory.
 4. **Pair 4:** choose reserved use—clock, power/control, protection, or future bandwidth—or require it to remain unused.
-5. **GDP encoding:** accept or replace the draft 8/8/8/8/64/64-bit, 20-octet header; define Version 1, byte order, malformed-packet behavior, and QoS bit semantics.
+5. **GDP encoding:** accept or replace the draft 8/8/8/8/64/64-bit, five-flit header; define Version 1, malformed-packet behavior, and QoS bit semantics.
 6. **Path payload limit:** choose link MTUs and the endpoint fragmentation/reassembly method without adding fields to GDP.
 7. **Address configuration:** define prefix-offer authority, random-suffix collision probability, claim timers, persistent leases, multi-router coordination, and renumbering.
 8. **Transport redesign:** resolve the duplicate Receive Window, half-octet CONNECT/ACK sizes, sequence/ack fields, checksum, handles, stream packets, Reset ID proof, and state machines.

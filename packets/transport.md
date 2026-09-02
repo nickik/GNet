@@ -6,49 +6,63 @@ Status: **OPEN; historical field requirements preserved**
 
 The tunnel/stream model requires encodings for:
 
-| Packet | Required role |
-|---|---|
-| CONNECT | propose Tunnel ID, reset authority, service selector, security/profile, and initial flow-control values |
-| CONNECT_ACK | accept and return local Tunnel Handle and negotiated values |
-| STREAM_OPEN | request a Stream ID and its delivery/security/compression profile |
-| STREAM_ACCEPT | accept or modify the stream profile |
-| DATA | carry Stream ID, data/fragment position, and only the state required by that profile |
-| ACK | acknowledge reliable/sequenced delivery and advertise flow-control state |
-| STREAM_CLOSE | end one stream without destroying the tunnel |
-| TUNNEL_CLOSE / RESET / REBIND | destructive control that MUST prove the Reset ID |
+- **CONNECT** proposes Tunnel ID, reset authority, service selector, security/profile, and initial flow-control values.
+- **CONNECT_ACK** accepts and returns a local Tunnel Handle and negotiated values.
+- **STREAM_OPEN** requests a Stream ID and delivery/security/compression profile.
+- **STREAM_ACCEPT** accepts or modifies the stream profile.
+- **DATA** carries Stream ID, data/fragment position, and only the state required by that profile.
+- **ACK** acknowledges reliable/sequenced delivery and advertises flow-control state.
+- **STREAM_CLOSE** ends one stream without destroying the tunnel.
+- **TUNNEL_CLOSE, RESET, and REBIND** are destructive controls that MUST prove the Reset ID.
 
 Normal DATA MUST NOT contain the Reset ID. Service names, ports, or service codes appear during CONNECT/STREAM_OPEN and are not repeated on DATA.
 
-## Previously corrected CONNECT field list
+## Mechanical flit packing of the historical CONNECT proposal
 
-The latest recorded CONNECT proposal contained, in order:
+The latest recorded field sequence totals 164 meaningful bits. Packed without implicit alignment, it occupies six flits and needs 28 final padding bits:
 
-| Field | Bits |
-|---|---:|
-| Type | 4 |
-| Reserved | 4 |
-| Receive Window | 8 |
-| Destination Port | 16 |
-| Receive Window | 12 |
-| Window Scale | 24 |
-| Tunnel ID | 64 |
-| Source Port | 16 |
-| Checksum | 16 |
+```text
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | Type  | Rsvd  | Recv Window  |       Destination Port         | Flit 0
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | Receive Window (12) |          Window Scale [23:4]            | Flit 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |WS[3:0]|                 Tunnel ID [63:36]                     | Flit 2
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    Tunnel ID [35:4]                           | Flit 3
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |TID[3:0]|       Source Port       |      Checksum [15:4]       | Flit 4
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |Sum[3:0]|                  Padding = 0                         | Flit 5
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
 
-Total: **164 bits (20.5 octets)**. The duplicated Receive Window and half-octet total must be resolved before encoding.
+This diagram exposes rather than repairs the problems: two different Receive Window fields and several fields split across flit boundaries. It is **not** an accepted wire encoding.
 
-## Previously corrected CONNECT_ACK field list
+## Mechanical flit packing of the historical CONNECT_ACK proposal
 
-| Field | Bits |
-|---|---:|
-| Type | 4 |
-| Reserved | 12 |
-| Checksum | 16 |
-| Receive Window | 12 |
-| Receive Window Scale | 24 |
-| Tunnel ID | 64 |
-| Tunnel Handle | 64 |
+```text
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | Type  |    Reserved (12)     |           Checksum             | Flit 0
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | Receive Window (12) |          Window Scale [23:4]            | Flit 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |WS[3:0]|                 Tunnel ID [63:36]                     | Flit 2
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    Tunnel ID [35:4]                           | Flit 3
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |TID[3:0]|              Tunnel Handle [63:36]                   | Flit 4
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                  Tunnel Handle [35:4]                         | Flit 5
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |TH [3:0]|                  Padding = 0                         | Flit 6
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
 
-Total: **196 bits (24.5 octets)**. This also requires alignment correction.
+CONNECT_ACK contains 196 meaningful bits, occupies seven flits, and also needs 28 final padding bits. It is **not** an accepted wire encoding.
 
 Earlier requirements also called for 32-bit tunnel sequence and acknowledgment numbers. The next transport decision must define CONNECT, CONNECT_ACK, DATA, ACK, RESET, and CLOSE together, with exact state machines and test vectors, rather than repairing these layouts in isolation.
