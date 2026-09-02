@@ -13,6 +13,12 @@ GDP provides best-effort routed datagrams. Endpoints add the following functions
 - end-to-end integrity and optional encryption;
 - reserved-flow setup and release.
 
+## Tunnel and stream model
+
+GTS first establishes a tunnel. A separate Reset ID is the capability required to close, reset, or rebind it; normal data does not repeat that capability. Multiple streams share the tunnel and negotiate reliability, ordering/sequencing, byte-versus-message delivery, encryption, and compression independently. Service selection belongs in CONNECT or STREAM_OPEN rather than ordinary data.
+
+The current working proposal uses a 64-bit Tunnel ID, 64-bit Reset ID, 16-bit Stream IDs, stream 0 for control, and stream 1 as default data. Only the tunnel-first model and reset-authority behavior are accepted; the widths and reserved stream numbers remain DRAFT.
+
 The architecture should support at least three service modes: unreliable datagram, reliable ordered stream/message, and reserved real-time flow. They may share a common session-control header, but routers must not need transport state for ordinary forwarding.
 
 ## Real-time flows

@@ -22,14 +22,18 @@ This repository is the working standards tree. It separates settled architectura
 | Layer model | [docs/architecture/layer-model.md](docs/architecture/layer-model.md) |
 | Addressing and routing | [docs/architecture/addressing-routing.md](docs/architecture/addressing-routing.md) |
 | Bootstrap and discovery | [docs/architecture/discovery-bootstrap.md](docs/architecture/discovery-bootstrap.md) |
+| Names and services | [docs/architecture/service-model.md](docs/architecture/service-model.md) |
 | Transport and reserved flows | [docs/architecture/transport-flows.md](docs/architecture/transport-flows.md) |
 | Identity and security | [docs/architecture/security-identity.md](docs/architecture/security-identity.md) |
 | Terminal service | [docs/architecture/terminal-services.md](docs/architecture/terminal-services.md) |
+| Deployment and implementation | [docs/architecture/deployment-topology.md](docs/architecture/deployment-topology.md), [docs/architecture/implementation-boundary.md](docs/architecture/implementation-boundary.md) |
 | Link family | [specs/gnet-link.md](specs/gnet-link.md), [specs/gnet-l.md](specs/gnet-l.md), [specs/gnet-a.md](specs/gnet-a.md), [specs/gnet-p.md](specs/gnet-p.md) |
 | Routed datagram | [specs/gdp.md](specs/gdp.md), [packets/gdp-datagram.md](packets/gdp-datagram.md) |
 | Control and discovery | [specs/gnet-control.md](specs/gnet-control.md), [packets/discovery.md](packets/discovery.md), [packets/address-configuration.md](packets/address-configuration.md) |
 | Sessions and transport | [specs/gnet-transport.md](specs/gnet-transport.md), [packets/session.md](packets/session.md), [packets/transport.md](packets/transport.md) |
-| Registries | [registry/protocol-types.md](registry/protocol-types.md), [registry/service-types.md](registry/service-types.md), [registry/control-messages.md](registry/control-messages.md) |
+| Session applications | [specs/gnet-session-control.md](specs/gnet-session-control.md), [specs/gterm.md](specs/gterm.md) |
+| Registries | [registry/protocol-types.md](registry/protocol-types.md), [registry/service-types.md](registry/service-types.md), [registry/control-messages.md](registry/control-messages.md), [registry/session-messages.md](registry/session-messages.md) |
+| Recovered project history | [docs/history/project-chat-audit.md](docs/history/project-chat-audit.md) |
 | Unresolved work | [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md) |
 
 ## Status notation

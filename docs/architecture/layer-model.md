@@ -8,9 +8,9 @@ Status: **FROZEN architecture; DRAFT protocol names**
 | L2 | DLP / GNET-LINK | framing, local endpoint/port delivery, local arbitration, CRC-8, link protocol demultiplexing | global addresses, sessions, directory lookup |
 | L3 | GDP | 64-bit source/destination, hop limit, QoS marking, next-protocol type | length, checksum, fragmentation, options, reliability, session/flow ID |
 | L4 | GTS transport | ports, sequencing, acknowledgment, retransmission, flow control, fragmentation/reassembly | routing decisions, user identity |
-| L5 | GNet Session Control / GNET-S | establishment, session handles, reservations, mobility binding, cryptographic association | application naming |
+| L5 | GTS tunnel control / GNET-S | tunnel establishment, reset/rebind authority, stream profiles, reservations, mobility binding, cryptographic association | application naming |
 | L6 | Directory and identity services | names, service discovery, credentials, authorization assertions | packet forwarding |
-| L7 | GTerm, boot, file, RPC, voice control | application semantics | physical/link behavior |
+| L7 | GSC, GTerm, boot, file, RPC, voice control | application semantics and named-service selection | physical/link behavior |
 
 DLP is protocol-neutral and may carry GDP, DECnet, TCP/IP, XNS, SNA gateway traffic, diagnostics, or link-local GCTL.
 

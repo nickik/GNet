@@ -2,6 +2,23 @@
 
 Status: **OPEN; historical field requirements preserved**
 
+## Current semantic packet family
+
+The tunnel/stream model requires encodings for:
+
+| Packet | Required role |
+|---|---|
+| CONNECT | propose Tunnel ID, reset authority, service selector, security/profile, and initial flow-control values |
+| CONNECT_ACK | accept and return local Tunnel Handle and negotiated values |
+| STREAM_OPEN | request a Stream ID and its delivery/security/compression profile |
+| STREAM_ACCEPT | accept or modify the stream profile |
+| DATA | carry Stream ID, data/fragment position, and only the state required by that profile |
+| ACK | acknowledge reliable/sequenced delivery and advertise flow-control state |
+| STREAM_CLOSE | end one stream without destroying the tunnel |
+| TUNNEL_CLOSE / RESET / REBIND | destructive control that MUST prove the Reset ID |
+
+Normal DATA MUST NOT contain the Reset ID. Service names, ports, or service codes appear during CONNECT/STREAM_OPEN and are not repeated on DATA.
+
 ## Previously corrected CONNECT field list
 
 The latest recorded CONNECT proposal contained, in order:

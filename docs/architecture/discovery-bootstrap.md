@@ -18,7 +18,7 @@ SOLICIT and ADVERTISE carry a registered service type. Initial service types inc
 4. Address offer, random suffix selection, claim, and confirmation.
 5. Authentication/terminal registration when policy requires it.
 6. `SOLICIT(Directory)` as a unicast or tightly scoped GDP control request.
-7. Directory lookup for a named service such as terminal, boot, file, or RPC.
+7. Directory lookup for a named service such as terminal, boot, file, or RPC. Results may rank several local or remote providers by policy, load, and capability.
 8. End-to-end session establishment with the selected service.
 
 A ROM terminal may use a local terminal server directly only as a defined fallback when no directory is reachable. It must not search the whole internet for a terminal server.
@@ -26,6 +26,8 @@ A ROM terminal may use a local terminal server directly only as a defined fallba
 ## Directory hierarchy
 
 District registrars maintain current device and local-service reachability. Metro registries identify the correct district. Ordinary name resolution is a normal routed packet service, not a permanent function of the physical control pair.
+
+A directory service record should expose the logical service name and type, address candidates, terminal/application classes, authentication method, load/preference, location, access group, and lifetime. The endpoint asks for services visible to the current device or authenticated user.
 
 ## Failure behavior
 

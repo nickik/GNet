@@ -4,7 +4,9 @@ Status: **ACCEPTED architecture; OPEN mechanisms**
 
 Routers forward addresses and QoS; they do not authenticate users on every packet. Endpoint/session protocols provide integrity, confidentiality, replay protection, and peer authentication. The Digital Identity System or another directory-backed authority maps people, devices, roles, and service permissions.
 
-A terminal may contain a removable smart card or equivalent security token. During login it proves possession of a credential to an identity or terminal service. The token's secret must not be transmitted. A device address is not itself a user identity.
+A terminal or mobile device may contain a removable **DigitalKey**, a smart-card/SIM-like security token. It may carry the user's GNet identity, telephone/loading number, protected encryption credentials, billing association, and online-service credentials. During login it proves possession of a credential to an identity or terminal service. Secret key material must not be transmitted. A device address is not itself a user identity.
+
+The Reset ID is also capability-like: it authorizes tunnel close/reset/rebind and is deliberately absent from normal data. Call-control and media encryption use separate keys so a session server may coordinate setup without decrypting endpoint media.
 
 Bootstrap security has three distinct questions:
 

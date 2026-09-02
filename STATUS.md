@@ -10,6 +10,7 @@ This repository is **GNet Draft 0.1**. It is sufficient to discuss interoperable
 - GNet addresses are 64-bit and hierarchical. A customer receives at least eight device/suffix bits. Endpoints remain globally reachable; NAT is not part of the architecture.
 - Links are point-to-point, physically identified, or centrally arbitrated. Core operation never depends on Ethernet-style MAC learning or a shared collision domain.
 - DLP uses an 8-bit CRC. Stronger end-to-end integrity belongs above GDP.
+- A DLP logical line has one directly attached endpoint and carries no network addresses or session state.
 - Retransmission, session tracking, encryption, and application identity are endpoint concerns, not router forwarding concerns.
 - Voice is a reserved packet flow. Conversion to legacy circuit telephony occurs at gateways.
 - Usage accounting is outside the forwarding fast path.
@@ -23,6 +24,9 @@ This repository is **GNet Draft 0.1**. It is sufficient to discuss interoperable
 - The only unavoidable local fanout is an initial solicitation. Advertisements and subsequent configuration are returned directly.
 - Bootstrap order is router discovery, address configuration, directory discovery, then named service selection.
 - Native GNet switches may be QDX internally. Small systems may integrate the same architecture on one PCB; large systems may use QDX backplanes and cards.
+- GTS is tunnel-first: destructive close/reset/rebind operations require a Reset ID, while ordinary data omits it; independently configured streams are multiplexed inside a tunnel.
+- Logical service names may resolve to multiple providers, including providers outside the local subnet.
+- GSC signaling is separated from direct endpoint-to-endpoint media/data flow.
 
 ## DRAFT items
 
@@ -31,6 +35,7 @@ This repository is **GNet Draft 0.1**. It is sufficient to discuss interoperable
 - DLP frame field widths, frame size, and CRC polynomial.
 - Discovery and address-configuration payload layouts.
 - Transport packet layouts and algorithms.
+- Tunnel/Reset/Stream identifier widths, reserved stream values, and the final port-versus-service-selector design.
 
 ## Interpretation rule
 
