@@ -38,7 +38,7 @@ Priority meanings: **P0** blocks interoperable prototype work; **P1** blocks a c
 26. **Management and accounting:** define configuration, telemetry, software loading, access control, usage records, and fault isolation while keeping accounting out of forwarding.
 27. **Implementation profiles:** define minimal terminal, workstation, local router, district hub, high-port-count switch, and high-speed trunk profiles.
 28. **Versioning and registries:** decide allocation authority, experimental/private ranges, extension compatibility, deprecation, and negotiation.
-29. **Licensing and standards governance:** select repository license, patent policy, change process, implementer review, and ownership of the open standard.
+29. **Standards governance:** confirm how the existing MPL 2.0 applies to specification text, and define any additional patent commitment, change process, implementer review, and stewardship of the open standard.
 30. **Reference implementation:** choose language, simulator/emulator targets, capture format, diagnostics, and reproducible interoperability lab.
 
 ## Recommended next decisions
