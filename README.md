@@ -39,3 +39,7 @@ Documents use **FROZEN**, **ACCEPTED**, **DRAFT**, and **OPEN**. Only FROZEN sta
 ## Repository scope
 
 GNet defines protocols, not a particular router chassis. QDX may implement and accelerate a GNet switch internally, but QDX is not a network layer and does not own routing, discovery, authentication, or transport semantics.
+
+## License
+
+This repository is licensed under the [Mozilla Public License 2.0](LICENSE).
