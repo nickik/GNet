@@ -7,4 +7,4 @@
 5. Use the words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY only for normative requirements.
 6. Keep mechanism at the lowest necessary layer: routers forward GDP; endpoints own sessions and security; directories own names.
 
-A project license has not yet been selected. Contributions should not assume a licensing policy until that open question is resolved.
+Contributions are made under the repository's [Mozilla Public License 2.0](LICENSE). Whether the standards process needs an additional specification or patent-policy commitment remains an open governance question.
