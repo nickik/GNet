@@ -3,19 +3,19 @@ id: 32-bit-flit-format
 title: "32-bit Flit Format"
 aliases: ["Flit format","GNet flit"]
 type: packet
-status: mixed
+status: draft
 layers: ["L2"]
-tags: ["gnet","gnet/packet","gnet/status/mixed","gnet/layer/l2"]
+tags: ["gnet","gnet/packet","gnet/status/draft","gnet/layer/l2"]
 parent: "[[Packet Formats MOC]]"
-related: ["[[Direct Link Protocol]]","[[Virtual Channels and VCIDs]]","[[DLP Segment Size Classes]]","[[GDP Datagram]]","[[ADR-0008 VCID in Every Flit]]"]
-updated: 2026-09-02
+related: ["[[Direct Link Protocol]]","[[GDP Datagram]]","[[ADR-0007 32-bit Flit Format]]","[[ADR-0008 VCID in Every Flit]]"]
+updated: 2026-09-03
 ---
 # 32-bit flit format and notation
 
 > [!info] Knowledge graph
-> **Up:** [[Packet Formats MOC]] · **Related:** [[Direct Link Protocol]] · [[Virtual Channels and VCIDs]] · [[DLP Segment Size Classes]] · [[GDP Datagram]] · [[ADR-0008 VCID in Every Flit]]
+> **Up:** [[Packet Formats MOC]] · **Related:** [[Direct Link Protocol]] · [[GDP Datagram]]
 
-Status: **FROZEN 32-bit total width, 4-bit VCID, and 28 carried bits; DRAFT DLP header/trailer details**
+Status: **CURRENT DRAFT**
 
 Every wire flit is exactly 32 bits:
 
@@ -23,40 +23,39 @@ Every wire flit is exactly 32 bits:
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |                  Carried bits [27:0]                  |
+   |VCID |S|                 Carried bits [28:0]                   |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
-Bits 0–3 contain the four-bit Virtual Channel Identifier. Bits 4–31 carry exactly 28 bits of DLP header, protocol payload, padding, or trailer data. The VCID is inside the 32-bit flit; it is not an additional tag outside it.
+- **VCID:** 2-bit hop-local Virtual Channel Identifier.
+- **S / SOF:** 1 for the first flit of a frame, 0 for continuation flits.
+- **Carried bits:** 29 bits available to the framed protocol.
 
-Bits are numbered from 0 at the most-significant bit to 31 at the least-significant bit. Within the 28-bit carried region, protocol bit 0 is placed first. Multi-octet protocol fields use network byte order and are treated as continuous bitstrings: the most-significant octet and most-significant bit are carried first.
+The VCID and SOF are part of the 32-bit flit, not sideband.
 
-Because 28 is not divisible by eight, protocol octets and 32-bit logical fields routinely cross physical flit boundaries. No alignment padding is inserted between flits.
+## First-flit frame type
 
-## DLP segment packaging
+On the first flit only (`SOF=1`), the first of the 29 carried bits is the one-bit **Frame Type** discriminator. That leaves 28 protocol-specific bits in the first flit. Continuation flits (`SOF=0`) use all 29 carried bits as protocol data.
 
-For a DLP payload of **N octets**:
+Current Frame Type values:
 
-```text
-   Flit 0                         VCID + 28-bit DLP segment header
-   Flits 1 .. K                   VCID + consecutive 28-bit payload chunks
-   Flit K+1                       VCID + DLP integrity trailer
+- `0` — GDP data frame.
+- `1` — Hello frame.
 
-   K = ceil((8 × N) / 28) = ceil((2 × N) / 7)
-```
+No additional DLP frame types are currently defined. New services and control functions should normally be built as protocols carried by GDP.
 
-The final payload chunk is followed by between zero and 27 zero-padding bits. Payload Length counts meaningful payload octets only. Every flit in the segment repeats the same VCID, although a link scheduler may interleave flits from other active VCIDs between them. [[DLP Segment Size Classes]] bounds the meaningful payload to 64, 256, or 1,024 octets according to the DLP Segment Class.
+## GDP consequence
 
-The current trailer draft places CRC-8 in eight of its 28 carried bits. It is a DLP integrity check and is never part of GDP. The precise DLP integrity encoding remains open.
+GDP deliberately exploits the asymmetric first-flit capacity:
 
-Preamble, clock/synchronization symbols, idle symbols, and physical request/grant signaling are outside the 32-bit flit definition.
+- Flit 1: Frame Type plus exactly 28 bits of immediately useful routing metadata.
+- Flit 2: 29 bits of checksum/flow metadata.
+- Flits 3–6: two 58-bit addresses, each occupying exactly two 29-bit continuation flits.
 
-## GDP inside DLP
+See [[GDP Datagram]] for the exact layout.
 
-GDP is a 20-octet logical header followed immediately by its payload. DLP slices that continuous bitstream into 28-bit carried regions. For a GDP packet with M payload octets, DLP Payload Length is `20 + M` and the payload-flit count is:
+## Ordering
 
-```text
-ceil((160 + 8 × M) / 28)
-```
+Fields are transmitted most-significant bit first. Multi-bit values use network bit order. No alignment padding is inserted between logical fields unless the packet format explicitly defines reserved bits.
 
-The first six payload flits are shown in [[GDP Datagram]]. The sixth contains the final 20 GDP-header bits plus the first eight GDP-payload bits when a payload is present. GDP has no separate length, padding, checksum, CRC, or other integrity field. A router removes and verifies the incoming DLP envelope, processes GDP, and constructs a new DLP envelope and VCID assignment for the next link.
+The physical medium may serialize or encode a flit differently; the logical transfer unit remains exactly 32 bits.
