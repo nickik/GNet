@@ -8,18 +8,20 @@ layers: ["L2"]
 tags: ["gnet","gnet/decision","gnet/status/accepted","gnet/layer/l2"]
 parent: "[[Decisions MOC]]"
 related: ["[[32-bit Flit Format]]","[[Direct Link Protocol]]","[[ADR-0008 VCID in Every Flit]]"]
-updated: 2026-09-02
+updated: 2026-09-03
 ---
-# Decision 0007: Show and package the protocol as 32-bit flits
+# Decision 0007: Use a 32-bit flit as the complete link-transfer unit
 
-> [!info] Knowledge graph
-> **Up:** [[Decisions MOC]] · **Related:** [[32-bit Flit Format]] · [[Direct Link Protocol]] · [[ADR-0008 VCID in Every Flit]]
+Status: **ACCEPTED; amended 2026-09-03**
 
+Every transmitted flit is exactly 32 bits. The current base layout is:
 
-Status: **ACCEPTED presentation unit; DRAFT DLP trailer details**
+```text
+[ VCID:2 | SOF:1 | Carried bits:29 ]
+```
 
-All GNet wire-format documents use RFC-style bit diagrams. Where a row is identified as a transmitted flit, it is exactly 32 bits and includes the four-bit VCID defined by [[ADR-0008 VCID in Every Flit]]. Logical protocol layouts must be labelled as logical words rather than flits. Packet definitions must show or reference how the logical bitstream crosses 28-bit carried-region boundaries.
+VCID and SOF are part of the 32-bit flit and are not sideband. On the first flit only, the first carried bit is the one-bit Frame Type discriminator, leaving 28 protocol-specific bits in that first flit. Continuation flits carry 29 protocol bits.
 
-Multi-octet fields use network byte order. DLP supplies the exact payload-octet length, the last 28-bit carried region is zero-padded, and a final flit carries the DLP integrity trailer. The integrity algorithm and trailer allocation remain open.
+The physical medium may serialize or encode the logical flit differently. Packet documents must distinguish logical protocol fields from transmitted flits and show the actual flit mapping where it matters.
 
-A 32-bit flit is the complete logical link-transfer unit, not 32 payload bits plus sideband. This decision does not require 32 parallel physical wires; each medium may serialize and encode the flit differently.
+This amendment supersedes the earlier 4-bit-VCID/28-carried-bit allocation while retaining the 32-bit total flit width.
