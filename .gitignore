@@ -1,9 +1,4 @@
-# Obsidian per-user state
+# Obsidian per-device/session state
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
-.obsidian/cache
-.trash/
-
-# Operating-system metadata
-.DS_Store
-Thumbs.db
+.obsidian/cache/
