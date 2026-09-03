@@ -6,13 +6,13 @@ type: implementation
 status: mixed
 tags: ["gnet","gnet/implementation","gnet/status/mixed"]
 parent: "[[Implementation MOC]]"
-related: ["[[Direct Link Protocol]]","[[GNet Layer Model]]"]
+related: ["[[Direct Link Protocol]]","[[Virtual Channels and VCIDs]]","[[GNet Layer Model]]"]
 updated: 2026-09-02
 ---
 # Implementation and accelerator boundary
 
 > [!info] Knowledge graph
-> **Up:** [[Implementation MOC]] · **Related:** [[Direct Link Protocol]] · [[GNet Layer Model]]
+> **Up:** [[Implementation MOC]] · **Related:** [[Direct Link Protocol]] · [[Virtual Channels and VCIDs]] · [[GNet Layer Model]]
 
 
 Status: **ACCEPTED architecture; DRAFT command ABI**
@@ -37,6 +37,6 @@ The completion record returns the port, buffer, actual length, status, and notif
 
 MULTI_TRANSMIT, RECEIVE_ANY, COPY_FRAME, BATCH_RX, BATCH_TX, and QUEUED_COMMANDS may improve switching throughput.
 
-Hardware may also parse GDP headers, maintain queues, perform prefix or established-flow lookups, and move packet data by DMA. ROUTE, RETRANSMIT, CONGESTION_CONTROL, RPC, discovery, authentication, and name lookup remain host/protocol functions unless an accelerator is exactly behavior-compatible with the software implementation.
+Hardware may also allocate VCIDs, maintain per-VCID segment/length/integrity/timeout state, interleave active VCIDs, parse GDP headers across 28-bit carried regions, maintain queues, perform prefix or established-flow lookups, and move packet data by DMA. ROUTE, RETRANSMIT, CONGESTION_CONTROL, RPC, discovery, authentication, and name lookup remain host/protocol functions unless an accelerator is exactly behavior-compatible with the software implementation.
 
 Integrated one-board devices remain logically PLIO/QDX devices so that small GS routers and modular backplane systems share drivers and management.

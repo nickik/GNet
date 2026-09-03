@@ -16,5 +16,6 @@ updated: 2026-09-02
 
 - [[Implementation Boundary]] — PLIO, QDX, QDX-GNET, and optional acceleration.
 - [[Deployment Topology]] — implementation-scale and redundancy assumptions.
-- [[Direct Link Protocol]] — the hardware-facing frame.
+- [[Direct Link Protocol]] — the hardware-facing bounded-segment envelope.
+- [[Virtual Channels and VCIDs]] — per-VCID state, interleaving, and resource release.
 - [[Open Questions]] — implementation profiles and QDX-GNET ABI work.

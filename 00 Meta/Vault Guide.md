@@ -36,7 +36,7 @@ Open the repository root as an Obsidian vault and begin at [[GNet Home]]. No com
 3. Treat a note's YAML `status` as canonical.
 4. Use [[Open Questions]] for unresolved work; do not hide uncertainty in protocol prose.
 5. Use decision notes when changing a frozen or accepted architectural choice.
-6. Packet layouts use one RFC-style row per 32-bit flit.
+6. Packet layouts use RFC-style 32-bit rows. A transmitted flit row shows the 4-bit VCID plus 28 carried bits; logical protocol rows must be labelled `Word`, never `Flit`.
 
 ## Linking rules
 

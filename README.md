@@ -20,7 +20,7 @@ This repository is both an Obsidian-compatible knowledge base and the working pr
 2. In Obsidian, choose **Open folder as vault** and select the repository root.
 3. Begin with [GNet Home](Home.md).
 
-No community plugins are required. Internal notes use unique filenames, YAML properties, wikilinks, backlinks, nested tags, Maps of Content, and RFC-style 32-bit packet diagrams.
+No community plugins are required. Internal notes use unique filenames, YAML properties, wikilinks, backlinks, nested tags, Maps of Content, and RFC-style packet diagrams. Every actual wire flit is shown as exactly 32 bits: a 4-bit VCID plus 28 carried bits.
 
 ## GitHub navigation
 

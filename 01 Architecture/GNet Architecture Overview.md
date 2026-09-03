@@ -7,13 +7,13 @@ status: frozen
 layers: ["L1","L2","L3","L4","L5","L6","L7"]
 tags: ["gnet","gnet/architecture","gnet/status/frozen","gnet/layer/l1","gnet/layer/l2","gnet/layer/l3","gnet/layer/l4","gnet/layer/l5","gnet/layer/l6","gnet/layer/l7"]
 parent: "[[Architecture MOC]]"
-related: ["[[GNet Layer Model]]","[[32-bit Flit Format]]"]
+related: ["[[GNet Layer Model]]","[[32-bit Flit Format]]","[[Virtual Channels and VCIDs]]"]
 updated: 2026-09-02
 ---
 # GNet architecture overview
 
 > [!info] Knowledge graph
-> **Up:** [[Architecture MOC]] · **Related:** [[GNet Layer Model]] · [[32-bit Flit Format]]
+> **Up:** [[Architecture MOC]] · **Related:** [[GNet Layer Model]] · [[32-bit Flit Format]] · [[Virtual Channels and VCIDs]]
 
 
 Status: **FROZEN layer boundaries; individual protocols retain their own status**
@@ -31,7 +31,7 @@ Application message
                     transmitted as 32-bit flits by GNET-L, GNET-A, or GNET-P
 ```
 
-A 32-bit flit is the common presentation unit used throughout the packet specifications. Each row in an RFC-style packet diagram is exactly one flit. DLP frames carry an exact octet length, so the final payload flit may contain zero padding. See [[32-bit Flit Format]].
+A transmitted flit is exactly 32 bits: a 4-bit hop-local VCID followed by 28 carried bits. Protocol bitstreams are packed continuously across those 28-bit regions, so octets and logical 32-bit fields may cross flit boundaries. DLP segments carry an exact octet length, so the final carried region may contain zero padding. See [[32-bit Flit Format]] and [[Virtual Channels and VCIDs]].
 
 ## Layer 1 — physical media
 
@@ -45,21 +45,19 @@ Layer 1 owns signaling, clocking, line coding, request/grant or polling, and phy
 
 ## Layer 2 — Direct Link Protocol
 
-**DLP/GNET-LINK** packages a payload into 32-bit flits, identifies the carried protocol, supplies the exact payload length, and detects link corruption with CRC-8. It has no source or destination network address and no session state. Local delivery comes from the physical port or scheduled channel.
+**DLP/GNET-LINK** packages a payload into bounded 32-bit flit segments, identifies the carried protocol, supplies the exact payload length, and detects link corruption. Every flit begins with a 4-bit VCID, allowing several active segments to be interleaved on one link. DLP size classes bound the meaningful payload at 64, 256, or 1,024 octets. The VCID is local to a link and direction and is replaced at each router. DLP has no source or destination network address and no end-to-end session state; local delivery comes from the physical port or scheduled premise channel.
 
 DLP is protocol-neutral and can carry GDP, link-local GCTL, DECnet, IP, XNS, or gateway traffic.
 
 ## Layer 3 — Global Data Protocol
 
-**GDP** is the common routed datagram. Its fixed header is five flits:
+**GDP** is the common routed datagram. Its fixed header is 20 logical octets:
 
 1. Version, Type, Hop Limit, and QoS;
-2. source-address high word;
-3. source-address low word;
-4. destination-address high word;
-5. destination-address low word.
+2. a 64-bit source address;
+3. a 64-bit destination address.
 
-GDP uses hierarchical 64-bit global addresses. It deliberately has no length, checksum, fragmentation, options, tunnel/flow identifier, sequence number, acknowledgment, or encryption metadata.
+When carried by DLP, the 160 GDP-header bits occupy portions of six 28-bit carried regions; the sixth can also carry the first eight payload bits. GDP uses hierarchical 64-bit global addresses. It deliberately has no length, checksum, CRC, integrity flag/trailer, fragmentation, options, tunnel/flow identifier, sequence number, acknowledgment, or encryption metadata.
 
 ## Layer 4 — GNet Transport
 

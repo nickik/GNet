@@ -21,5 +21,8 @@ updated: 2026-09-02
 - [[ADR-0005 Tunnels and Streams]]
 - [[ADR-0006 GNET-L Rate]]
 - [[ADR-0007 32-bit Flit Format]]
+- [[ADR-0008 VCID in Every Flit]]
+- [[ADR-0009 No GDP Integrity Field]]
+- [[ADR-0010 DLP Segment Size Classes]]
 
 Create a superseding ADR rather than silently rewriting a frozen decision.

@@ -7,18 +7,18 @@ status: mixed
 layers: ["L4","L5"]
 tags: ["gnet","gnet/architecture","gnet/status/mixed","gnet/layer/l4","gnet/layer/l5"]
 parent: "[[Architecture MOC]]"
-related: ["[[GTS Protocol]]","[[GTS Transport Packets]]","[[ADR-0005 Tunnels and Streams]]"]
+related: ["[[GTS Protocol]]","[[GTS Transport Packets]]","[[Virtual Channels and VCIDs]]","[[ADR-0005 Tunnels and Streams]]"]
 updated: 2026-09-02
 ---
 # Transport, sessions, and reserved flows
 
 > [!info] Knowledge graph
-> **Up:** [[Architecture MOC]] · **Related:** [[GTS Protocol]] · [[GTS Transport Packets]] · [[ADR-0005 Tunnels and Streams]]
+> **Up:** [[Architecture MOC]] · **Related:** [[GTS Protocol]] · [[GTS Transport Packets]] · [[Virtual Channels and VCIDs]] · [[ADR-0005 Tunnels and Streams]]
 
 
 Status: **FROZEN placement; OPEN wire protocol**
 
-GDP provides best-effort routed datagrams. Endpoints add the following functions as needed:
+GDP provides best-effort routed datagrams and no integrity field. Endpoints add the following functions as needed:
 
 - source and destination ports;
 - session/tunnel identity and local handles;
@@ -40,6 +40,8 @@ The architecture should support at least three service modes: unreliable datagra
 ## Real-time flows
 
 Voice, interactive media, and other bounded-delay traffic remain GDP packets. Endpoints request resources through GNet Session Control. Routers perform admission control and schedule the admitted traffic using GDP QoS plus local reservation state. Legacy telephone circuits terminate only at district or edge gateways.
+
+The persistent flow or reservation identity is distinct from the four-bit VCID. A router may bind successive bounded DLP segments of one reserved flow to temporary outgoing VCIDs. The VCID is released after each segment and never becomes an end-to-end transport identifier.
 
 ## Historical transport draft
 

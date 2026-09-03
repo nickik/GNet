@@ -7,19 +7,19 @@ status: draft
 layers: ["L1","L2"]
 tags: ["gnet","gnet/media","gnet/status/draft","gnet/layer/l1","gnet/layer/l2"]
 parent: "[[Media and Links MOC]]"
-related: ["[[Direct Link Protocol]]","[[Deployment Topology]]"]
+related: ["[[Direct Link Protocol]]","[[Virtual Channels and VCIDs]]","[[Deployment Topology]]"]
 updated: 2026-09-02
 ---
 # GNET-A residential access
 
 > [!info] Knowledge graph
-> **Up:** [[Media and Links MOC]] · **Related:** [[Direct Link Protocol]] · [[Deployment Topology]]
+> **Up:** [[Media and Links MOC]] · **Related:** [[Direct Link Protocol]] · [[Virtual Channels and VCIDs]] · [[Deployment Topology]]
 
 
 Status: **ACCEPTED concept; OPEN detailed specification**
 
 GNET-A is a centrally polled shared access system for approximately 256 homes or premises. Its target aggregate rate is 10 Mb/s. The access controller owns upstream transmission opportunities, making collisions impossible and allowing capacity to be reserved for voice or other real-time GDP flows.
 
-GNET-A carries ordinary DLP frames. It must define premise/channel identity, polling cycle, ranging/timing, downstream selection, admission and scheduling of reserved capacity, failure isolation, and privacy between premises.
+GNET-A carries ordinary VCID-tagged DLP segments. Every 32-bit flit contains a 4-bit VCID and 28 carried bits. A polling grant and premise channel identify the transmitter; the VCID distinguishes active bounded segments within that physical channel and direction. GNET-A must define premise/channel identity, polling cycle, ranging/timing, downstream selection, admission and scheduling of reserved capacity, failure isolation, and privacy between premises.
 
 The physical plant, modulation, coding, reach, repeater plan, and exact sharing hierarchy remain OPEN. GNET-A must not introduce a second network-layer address architecture.

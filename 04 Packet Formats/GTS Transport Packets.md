@@ -33,52 +33,54 @@ The tunnel/stream model requires encodings for:
 
 Normal DATA MUST NOT contain the Reset ID. Service names, ports, or service codes appear during CONNECT/STREAM_OPEN and are not repeated on DATA.
 
-## Mechanical flit packing of the historical CONNECT proposal
+## Logical packing of the historical CONNECT proposal
 
-The latest recorded field sequence totals 164 meaningful bits. Packed without implicit alignment, it occupies six flits and needs 28 final padding bits:
+The latest recorded field sequence totals 164 meaningful bits. The following historical diagram packs it into six logical 32-bit words with 28 final padding bits. These are not transmitted flits: actual DLP flits reserve four bits for VCID and carry only 28 bits of the continuous GDP/GTS bitstream.
 
 ```text
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | Type  | Rsvd  | Recv Window  |       Destination Port         | Flit 0
+   | Type  | Rsvd  |  Recv Window  |       Destination Port        |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | Receive Window (12) |          Window Scale [23:4]            | Flit 1
+   |  Receive Window (12)  |          Window Scale [23:4]          |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |WS[3:0]|                 Tunnel ID [63:36]                     | Flit 2
+   | WS lo |                   Tunnel ID [63:36]                   |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                    Tunnel ID [35:4]                           | Flit 3
+   |                       Tunnel ID [35:4]                        |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |TID[3:0]|       Source Port       |      Checksum [15:4]       | Flit 4
+   |TID lo |          Source Port          |    Checksum [15:4]    |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |Sum[3:0]|                  Padding = 0                         | Flit 5
+   |Sum lo |                      Padding = 0                      |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
 This diagram exposes rather than repairs the problems: two different Receive Window fields and several fields split across flit boundaries. It is **not** an accepted wire encoding.
 
-## Mechanical flit packing of the historical CONNECT_ACK proposal
+When appended after the 160-bit GDP header, the meaningful GDP/CONNECT bitstream is 324 bits and requires 12 DLP payload flits, each containing a 4-bit VCID plus 28 carried bits. Its final carried region has 12 padding bits.
+
+## Logical packing of the historical CONNECT_ACK proposal
 
 ```text
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | Type  |    Reserved (12)     |           Checksum             | Flit 0
+   | Type  |     Reserved (12)     |           Checksum            |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | Receive Window (12) |          Window Scale [23:4]            | Flit 1
+   |  Receive Window (12)  |          Window Scale [23:4]          |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |WS[3:0]|                 Tunnel ID [63:36]                     | Flit 2
+   | WS lo |                   Tunnel ID [63:36]                   |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                    Tunnel ID [35:4]                           | Flit 3
+   |                       Tunnel ID [35:4]                        |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |TID[3:0]|              Tunnel Handle [63:36]                   | Flit 4
+   |TID lo |                 Tunnel Handle [63:36]                 |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                  Tunnel Handle [35:4]                         | Flit 5
+   |                     Tunnel Handle [35:4]                      |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |TH [3:0]|                  Padding = 0                         | Flit 6
+   | TH lo |                      Padding = 0                      |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
-CONNECT_ACK contains 196 meaningful bits, occupies seven flits, and also needs 28 final padding bits. It is **not** an accepted wire encoding.
+CONNECT_ACK contains 196 meaningful bits, occupies seven logical words, and needs 28 logical-word padding bits. When appended after GDP, the 356 meaningful bits require 13 actual DLP payload flits and eight final carried-region padding bits. It is **not** an accepted wire encoding.
 
 Earlier requirements also called for 32-bit tunnel sequence and acknowledgment numbers. The next transport decision must define CONNECT, CONNECT_ACK, DATA, ACK, RESET, and CLOSE together, with exact state machines and test vectors, rather than repairing these layouts in isolation.

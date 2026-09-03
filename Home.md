@@ -37,7 +37,7 @@ updated: 2026-09-02
 ## Protocol stack
 
 1. **L1 media:** [[GNET-L]], [[GNET-A]], and [[GNET-P]]
-2. **L2 direct framing:** [[Direct Link Protocol]]
+2. **L2 tagged flits and bounded segments:** [[32-bit Flit Format]], [[Virtual Channels and VCIDs]], [[DLP Segment Size Classes]], and [[Direct Link Protocol]]
 3. **L3 routed datagrams:** [[GDP Protocol]] and [[GDP Datagram]]
 4. **L4/L5 tunnels and streams:** [[GTS Protocol]] and [[GTS Transport Packets]]
 5. **L5 security/session behavior:** [[Security and Identity]], [[Transport and Flows]]
@@ -53,6 +53,9 @@ updated: 2026-09-02
 - [[ADR-0005 Tunnels and Streams]]
 - [[ADR-0006 GNET-L Rate]]
 - [[ADR-0007 32-bit Flit Format]]
+- [[ADR-0008 VCID in Every Flit]]
+- [[ADR-0009 No GDP Integrity Field]]
+- [[ADR-0010 DLP Segment Size Classes]]
 
 ## Open work
 

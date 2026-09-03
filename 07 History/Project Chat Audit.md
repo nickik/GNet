@@ -32,6 +32,10 @@ This audit records material recovered from earlier Project GNET discussions and 
 - external SS7/E.164 handling at gateways and databases, not GDP routing;
 - home star, scheduled neighbourhood access, routed district trunks, dual-homed aggregation, and a redundant metro core;
 - strict separation of PLIO, QDX/QDX-GNET, and network protocol semantics.
+- a 32-bit transmitted flit containing a 4-bit hop-local VCID and 28 carried bits;
+- bounded per-VCID segments that permit interleaving and release the VCID after completion;
+- three DLP payload-size classes: 64, 256, and 1,024 octets;
+- no checksum, CRC, or other integrity field in GDP itself.
 
 ## Preserved as drafts
 
@@ -41,7 +45,7 @@ This audit records material recovered from earlier Project GNET discussions and 
 - provider-ranking and directory-record encodings;
 - GNET Access 256, GD16, GC32, and Voice Gateway 96 product profiles;
 - QDX-GNET batch/copy/queued acceleration commands;
-- store-and-forward, cut-through/wormhole, credit, and hop-local-label acceleration.
+- store-and-forward, cut-through/wormhole, credit, and persistent Link Flow ID acceleration above the mandatory hop-local VCID.
 
 ## Superseded or rejected
 
@@ -53,4 +57,4 @@ This audit records material recovered from earlier Project GNET discussions and 
 
 ## Conflicts still open
 
-The chat history does not settle minimal DLP framing versus the current length/class draft, numeric ports versus named service selectors, exact GTS fields, packet MTUs/fragmentation, or store-and-forward versus wormhole/cut-through behavior. These remain explicit entries in [[Open Questions]].
+The chat history does not settle the exact DLP 28-bit carried header/trailer, VCID allocation and error-recovery state machine, persistent Link Flow ID, numeric ports versus named service selectors, exact GTS fields, packet MTUs/fragmentation, or store-and-forward versus wormhole/cut-through behavior. These remain explicit entries in [[Open Questions]].

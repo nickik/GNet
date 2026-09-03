@@ -16,6 +16,7 @@ updated: 2026-09-02
 
 ## Network and control
 
+- [[Virtual Channels and VCIDs]] — hop-local active-segment multiplexing below GDP.
 - [[GDP Protocol]] — routed global datagram.
 - [[GCTL Protocol]] — bootstrap and network control.
 
