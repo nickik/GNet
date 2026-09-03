@@ -4,24 +4,23 @@ title: "GCTL Protocol"
 aliases: ["GCTL","GNet Control Protocol"]
 type: protocol
 status: draft
-layers: ["L2","L3"]
-tags: ["gnet","gnet/protocol","gnet/status/draft","gnet/layer/l2","gnet/layer/l3"]
+layers: ["L3"]
+tags: ["gnet","gnet/protocol","gnet/status/draft","gnet/layer/l3"]
 parent: "[[Protocols MOC]]"
-related: ["[[Discovery Packets]]","[[Address Configuration Packets]]","[[GCTL Message Registry]]","[[32-bit Flit Format]]"]
-updated: 2026-09-02
+related: ["[[Discovery Packets]]","[[Address Configuration Packets]]","[[GCTL Message Registry]]","[[GNet Link Control Protocol]]"]
+updated: 2026-09-03
 ---
 # GNet Control Protocol (GCTL)
 
-> [!info] Knowledge graph
-> **Up:** [[Protocols MOC]] · **Related:** [[Discovery Packets]] · [[Address Configuration Packets]] · [[GCTL Message Registry]] · [[32-bit Flit Format]]
+Status: **DRAFT network-control protocol**
 
+GCTL carries network-level discovery, address configuration, routing/OAM, and diagnostic messages. It is distinct from [[GNet Link Control Protocol|GLCP]].
 
-Status: **DRAFT**
+- **GLCP** is hop-local link control: HELLO, capability/rate negotiation, REQUEST, RX_REQUEST, CREDIT, GRANT, VC allocation/release, ABORT, RESET, and link status.
+- **GCTL** is network control associated with GDP configuration and routing/service behavior.
 
-GCTL carries bootstrap, discovery, address configuration, and network diagnostic messages. Before address assignment it is carried directly by DLP as link-local GCTL. After assignment it is normally a GDP payload.
+The earlier design that used a DLP first-flit Frame Type and direct-DLP GCTL before addressing is superseded. Native GNet bootstrap begins with GLCP. Network discovery/configuration then uses GDP/GCTL with the provisional/link-local addressing rules defined by the bootstrap profile.
 
-In either case, DLP transmits the continuous GCTL/GDP bitstream in 28-bit carried regions, with a 4-bit VCID in every 32-bit flit. Link-local packet notes show their direct-DLP packing; GDP-carried GCTL continues after the GDP header without realignment.
+GCTL does not provide transport reliability, ordinary directory name resolution, user login, or physical-link credit flow control. Requests that can be retried SHOULD carry a transaction identifier and be idempotent.
 
-GCTL does not provide ordinary directory name resolution, transport reliability, or user login. A transaction identifier allows a requester to match direct responses to a solicitation. Each request must be safe to repeat because initial delivery is unreliable.
-
-Message families are registered in [[GCTL Message Registry]]. Discovery and address configuration are defined separately in [[Discovery Packets]] and [[Address Configuration Packets]].
+Exact bootstrap GDP addressing for an unconfigured endpoint and final GCTL message encodings remain DRAFT.

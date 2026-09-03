@@ -4,42 +4,33 @@ title: "Vault Guide"
 aliases: ["How to use the GNet vault"]
 type: meta
 status: active
-tags: ["gnet", "gnet/meta", "gnet/status/active"]
+tags: ["gnet","gnet/meta","gnet/status/active"]
 parent: "[[GNet Home]]"
-related: ["[[Metadata Schema]]", "[[Tag Index]]", "[[Contributing]]"]
-updated: 2026-09-02
+related: ["[[Specification Status]]","[[Contributing]]"]
+updated: 2026-09-03
 ---
 # Vault guide
 
-> [!info] Knowledge graph
-> **Up:** [[GNet Home]] · **Related:** [[Metadata Schema]] · [[Tag Index]] · [[Contributing]]
-
-Open the repository root as an Obsidian vault and begin at [[GNet Home]]. No community plugins are required.
+Open the repository root as an Obsidian vault and begin at [[GNet Home]].
 
 ## Information architecture
 
-- **00 Meta** contains status, terminology, contribution rules, and the backlog.
-- **01 Architecture** explains system-wide relationships and boundaries.
-- **02 Media and Links** defines physical/link families and DLP.
-- **03 Protocols** defines protocol semantics and state.
-- **04 Packet Formats** defines actual 32-bit wire layouts.
-- **05 Registries** assigns numeric types and message identifiers.
-- **06 Implementation** separates interoperable behavior from PLIO/QDX mechanisms.
-- **07 History** records recovered and superseded project context.
-- **08 Decisions** contains architecture decision records.
-- **09 Templates** standardizes new notes.
+- **00 Meta** — status, terminology, contribution rules, backlog.
+- **01 Architecture** — system-wide relationships and boundaries.
+- **02 Media and Links** — PHY profiles, cabling, connector, GLCP, DLP, Coupler/Switch.
+- **03 Protocols** — network/higher protocol semantics.
+- **04 Packet Formats** — actual or logical wire layouts.
+- **05 Registries** — numeric allocations.
+- **06 Implementation** — interoperability/implementation boundary and minimum NIC.
+- **07 History** — recovered/superseded context.
+- **08 Decisions** — ADRs.
 
 ## Reading rules
 
 1. Read [[Specification Status]] before interpreting a field or requirement.
-2. Follow the nearest Map of Content rather than browsing folders blindly.
-3. Treat a note's YAML `status` as canonical.
-4. Use [[Open Questions]] for unresolved work; do not hide uncertainty in protocol prose.
-5. Use decision notes when changing a frozen or accepted architectural choice.
-6. Packet layouts use RFC-style 32-bit rows. A transmitted flit row shows the 4-bit VCID plus 28 carried bits; logical protocol rows must be labelled `Word`, never `Flit`.
-
-## Linking rules
-
-Use unique note names and Obsidian wikilinks. Link a concept the first time it is materially used. Prefer `[[GDP Protocol]]` over a path-dependent Markdown link. Use aliases only for natural display text.
-
-Each durable note should link upward to one MOC and sideways to two or more closely related notes. Obsidian backlinks then reveal downstream dependencies automatically.
+2. Follow the nearest MOC.
+3. Treat current accepted ADRs as stronger than old prose.
+4. Use [[Open Questions]] for unresolved work.
+5. A baseline transmitted flit row is 32 bits with 2-bit VCID + 30 carried bits. There is no SOF bit.
+6. A 32-bit protocol-layout aid that is not a physical flit must be labelled `Word`.
+7. Historical/chat notes are evidence of design evolution, not current requirements.

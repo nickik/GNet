@@ -3,71 +3,59 @@ id: direct-link-protocol
 title: "Direct Link Protocol"
 aliases: ["DLP","GNET-LINK"]
 type: protocol
-status: draft
+status: mixed
 layers: ["L2"]
-tags: ["gnet","gnet/protocol","gnet/status/draft","gnet/layer/l2"]
+tags: ["gnet","gnet/protocol","gnet/status/mixed","gnet/layer/l2"]
 parent: "[[Media and Links MOC]]"
-related: ["[[32-bit Flit Format]]","[[GDP Datagram]]","[[Virtual Channels and VCIDs]]","[[ADR-0004 Direct Point-to-Point Link]]"]
+related: ["[[32-bit Flit Format]]","[[GDP Datagram]]","[[Virtual Channels and VCIDs]]","[[GNet Link Control Protocol]]"]
 updated: 2026-09-03
 ---
 # Direct Link Protocol (DLP)
 
-> [!info] Knowledge graph
-> **Up:** [[Media and Links MOC]] · **Related:** [[32-bit Flit Format]] · [[GDP Datagram]]
+Status: **ACCEPTED boundary and segment model; DRAFT integrity encoding**
 
-Status: **CURRENT DRAFT**
+DLP is the minimal Layer-2 data-path contract for one GNet hop. It deliberately avoids global addressing, sessions, routing policy, user identity, and application semantics.
 
-DLP is the minimal Layer-2 protocol for direct links. It deliberately avoids network addressing, sessions, routing semantics, and application/service semantics. Those belong to GDP and protocols above GDP.
+## Baseline flit
 
-## Fundamental flit format
-
-Every transmitted flit is exactly 32 bits:
+Every baseline data flit is:
 
 ```text
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |VCID |S|                 Carried bits [28:0]                   |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+[ VCID:2 | Carried bits:30 ]
 ```
 
-- **VCID:** 2-bit hop-local Virtual Channel Identifier.
-- **SOF:** 1 for the first flit of a frame, 0 for continuation flits.
-- **Carried bits:** 29 bits.
+There is no SOF field and no first-flit Frame Type field.
 
-On the first flit only, the first carried bit is the one-bit **Frame Type** discriminator. Thus the first flit has 28 protocol-specific carried bits after Frame Type. Continuation flits have all 29 carried bits available.
+The infrastructure allocates a hop-local VC before data is sent. The first data flit received on an inactive allocated VC starts the segment implicitly. The receiver maintains the segment context until the known segment length completes or the VC is aborted, times out, or the link resets.
 
-## Frame Type
+## Segment length
 
-The initial registry is intentionally minimal:
+Native GNet data segments carry GDP. The GDP Size Class identifies the exact payload budget, allowing the receiver and forwarding infrastructure to determine the expected bounded transfer without adding a second DLP size-class system.
 
-- `0` — GDP data frame.
-- `1` — Hello frame.
+DLP does **not** define the superseded 64/256/1024-byte Segment Class field. See [[DLP Segment Size Classes]] for historical context and [[GDP Datagram]] for current package-size classes.
 
-Anything more complex than link-local Hello should normally be represented as GDP data and implemented above GDP instead of creating additional DLP frame types.
+Adaptation profiles that carry a non-GDP protocol directly over DLP MUST define an equivalent bounded-length binding before using a VC.
 
-## Hello
+## Link control separation
 
-Hello is a single-flit, link-local presence frame. It is never routed and carries no source/destination addresses, timing interval, routing table, or session state.
+On GNet-3 and GNet-10 copper, [[GNet Link Control Protocol|GLCP]] runs on the dedicated CONTROL-UP and CONTROL-DOWN pairs. GLCP performs bootstrap, capability negotiation, VC allocation, REQUEST/RX_REQUEST, CREDIT, GRANT, release, abort, reset, and link status. These operations are not GDP packets and do not consume data flits.
 
-```text
-[ VCID:2 | SOF=1 | FrameType=1 | Type:4 | Version:4 | Reserved:12 | Checksum:8 ]
-```
+## Flow control
 
-The reserved bits transmit as zero. The 8-bit checksum is the final field of the Hello flit.
+DLP data transmission obeys actual receiver credits:
 
-## GDP carriage
+> **1 GNet credit = guaranteed downstream receive capacity for exactly one physical flit.**
 
-For GDP, Frame Type is `0`. The GDP header occupies six flits. Flit 1 uses the remaining 28 first-flit bits exactly; Flit 2 uses all 29 carried bits; two 58-bit addresses then occupy four complete continuation flits. See [[GDP Datagram]].
+Credit is not permission to transmit immediately. Infrastructure issues a separate GRANT to schedule when some reserved credit may be consumed. See [[GNet Link Control Protocol]], [[GNet Coupler]], and [[GNet Switch]].
 
 ## Integrity
 
-DLP uses an **8-bit CRC** as its link-level accidental-error detector. This is intended to detect corruption caused by the physical link, including marginal or overly long serial links, while remaining inexpensive in early hardware.
+Hop-local accidental-error detection belongs to DLP. A small CRC is the intended early implementation. The exact CRC polynomial, initialization/reflection convention, trailer packing, and interaction with a final partially occupied carried region remain **DRAFT — requires interoperability validation**.
 
-The exact CRC-8 polynomial, initialization/reflection convention, and final placement in multi-flit DLP frames remain to be frozen. Hello additionally contains its own single-flit 8-bit checksum as specified above. GDP carries a separate lightweight header checksum for its routed header; GNet or another higher layer is responsible for end-to-end payload integrity when required.
+GDP has no checksum or integrity field. End-to-end integrity and reliability belong above GDP.
 
 ## Link semantics
 
-DLP assumes direct adjacency. Local physical identity comes from the actual point-to-point connection, router port, premise channel, or equivalent medium-specific endpoint. DLP therefore has no MAC source or destination address fields.
+DLP assumes direct adjacency or a centrally controlled local medium. Local physical identity comes from the actual switch/coupler/router port or medium-supplied channel. DLP therefore has no Ethernet-style MAC source/destination address fields.
 
-VCID state is hop-local and is replaced/terminated at forwarding nodes. The link scheduler may interleave flits from different VCIDs according to the medium and flow-control rules.
+VCID state is hop-local and is terminated or reassigned at forwarding nodes.

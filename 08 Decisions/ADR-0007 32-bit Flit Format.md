@@ -7,21 +7,19 @@ status: accepted
 layers: ["L2"]
 tags: ["gnet","gnet/decision","gnet/status/accepted","gnet/layer/l2"]
 parent: "[[Decisions MOC]]"
-related: ["[[32-bit Flit Format]]","[[Direct Link Protocol]]","[[ADR-0008 VCID in Every Flit]]"]
+related: ["[[32-bit Flit Format]]","[[ADR-0008 VCID in Every Flit]]","[[ADR-0011 Baseline VC2 Flit Without SOF]]"]
 updated: 2026-09-03
 ---
 # Decision 0007: Use a 32-bit flit as the complete link-transfer unit
 
-Status: **ACCEPTED; amended 2026-09-03**
+Status: **ACCEPTED; width remains normative**
 
-Every transmitted flit is exactly 32 bits. The current base layout is:
+Every transmitted GNet flit is exactly 32 logical bits. Physical media may serialize or line-code those bits differently.
+
+This ADR freezes the **32-bit total width**, not the internal metadata split. Earlier revisions described 4+28 and later 2+1+29 layouts. The current baseline allocation is defined by [[ADR-0011 Baseline VC2 Flit Without SOF]]:
 
 ```text
-[ VCID:2 | SOF:1 | Carried bits:29 ]
+[ VCID:2 | carried:30 ]
 ```
 
-VCID and SOF are part of the 32-bit flit and are not sideband. On the first flit only, the first carried bit is the one-bit Frame Type discriminator, leaving 28 protocol-specific bits in that first flit. Continuation flits carry 29 protocol bits.
-
-The physical medium may serialize or encode the logical flit differently. Packet documents must distinguish logical protocol fields from transmitted flits and show the actual flit mapping where it matters.
-
-This amendment supersedes the earlier 4-bit-VCID/28-carried-bit allocation while retaining the 32-bit total flit width.
+Historical layout changes do not supersede the 32-bit-width decision itself.

@@ -6,37 +6,24 @@ type: implementation
 status: mixed
 tags: ["gnet","gnet/implementation","gnet/status/mixed"]
 parent: "[[Implementation MOC]]"
-related: ["[[Direct Link Protocol]]","[[Virtual Channels and VCIDs]]","[[GNet Layer Model]]"]
-updated: 2026-09-02
+related: ["[[Minimum GNet-3 NIC]]","[[Direct Link Protocol]]","[[GNet Link Control Protocol]]","[[GNet Layer Model]]"]
+updated: 2026-09-03
 ---
 # Implementation and accelerator boundary
 
-> [!info] Knowledge graph
-> **Up:** [[Implementation MOC]] · **Related:** [[Direct Link Protocol]] · [[Virtual Channels and VCIDs]] · [[GNet Layer Model]]
-
-
 Status: **ACCEPTED architecture; DRAFT command ABI**
 
-GNet interoperability is defined by link and network wire protocols. PLIO and QDX are implementation mechanisms:
+GNet interoperability is defined by the network/link specification. PLIO and QDX are implementation mechanisms:
 
-- **PLIO** supplies the electrical/system-I/O contract: MMIO, arbitration, DMA, discovery, interrupts, and backplane behavior. It is not the processor memory bus.
+- **PLIO** supplies system-I/O/backplane behavior.
 - **QDX** supplies the software-facing queued-device ABI and device profiles.
-- **QDX-GNET** exposes correct basic GNet frame I/O.
-- **QDX-GNETA** is an optional acceleration profile. It may reduce copying or host intervention but may not add semantics required for interoperability.
+- **QDX-GNET** exposes correct basic GNet packet/link I/O.
+- optional acceleration may reduce copies or host intervention but may not add required private semantics.
 
-## Base QDX-GNET operations
+Every native adapter still implements [[Minimum GNet-3 NIC]] compatibility before negotiating advanced link modes.
 
-| Operation | Purpose |
-|---|---|
-| POST_RX | provide a receive buffer and capacity for a port |
-| TRANSMIT | transmit a frame from a DMA buffer through a port |
+Hardware may maintain VC allocation, per-VC receive contexts, exact flit-credit counters, GLCP state, DLP integrity, queues, GDP header parsing, prefix lookup, switch output/path state, and DMA. Baseline wire parsing uses 30 carried bits per VC2 flit.
 
-The completion record returns the port, buffer, actual length, status, and notification information.
+A switch/router implementation MAY use cut-through/wormhole flow with small buffers. Correctness must not require a hidden large whole-packet buffer when the GNet credit contract is satisfied.
 
-## Optional accelerator operations
-
-MULTI_TRANSMIT, RECEIVE_ANY, COPY_FRAME, BATCH_RX, BATCH_TX, and QUEUED_COMMANDS may improve switching throughput.
-
-Hardware may also allocate VCIDs, maintain per-VCID segment/length/integrity/timeout state, interleave active VCIDs, parse GDP headers across 28-bit carried regions, maintain queues, perform prefix or established-flow lookups, and move packet data by DMA. ROUTE, RETRANSMIT, CONGESTION_CONTROL, RPC, discovery, authentication, and name lookup remain host/protocol functions unless an accelerator is exactly behavior-compatible with the software implementation.
-
-Integrated one-board devices remain logically PLIO/QDX devices so that small GS routers and modular backplane systems share drivers and management.
+Routing policy, transport retransmission/congestion control, RPC, directory lookup, authentication, and application semantics remain host/protocol functions unless an accelerator is exactly behavior-compatible.

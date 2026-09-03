@@ -2,67 +2,50 @@
 id: current-protocol-stack-summary
 title: "Current Protocol Stack Summary"
 type: architecture
-status: draft
-layers: ["L2","L3","L4","L5"]
-tags: ["gnet","gnet/architecture","gnet/status/draft"]
+status: active
+layers: ["L1","L2","L3","L4","L5"]
+tags: ["gnet","gnet/architecture","gnet/status/active"]
 parent: "[[GNet Architecture Overview]]"
-related: ["[[Direct Link Protocol]]","[[32-bit Flit Format]]","[[GDP Datagram]]","[[GNet Transport]]"]
+related: ["[[GNet PHY Profiles]]","[[GNet Link Control Protocol]]","[[Direct Link Protocol]]","[[GDP Datagram]]"]
 updated: 2026-09-03
 ---
 # Current protocol stack summary
 
-This note is the short current-state reference for the GNet protocol suite after the September 2026 layer refactor.
+## Native link baseline
 
-## Layer 2 — Direct Link Protocol (DLP)
+- Minimum GNet-3 is universal.
+- Four copper pairs: control up/down and data up/down.
+- 3 Mbit/s nominal; 1.5 and 0.75 Mbit/s fallback.
+- 32-bit flit: `VCID:2 | carried:30`.
+- No SOF bit.
+- GLCP handles local bootstrap, capability negotiation, credits, grants, VC allocation, abort/reset/status.
+- One credit is one physical flit of guaranteed downstream capacity.
 
-DLP is deliberately minimal and direct-link oriented.
+## DLP
 
-- 32-bit logical flit.
-- `2-bit VCID | 1-bit SOF | 29 carried bits`.
-- On the first flit only, the first carried bit is **Frame Type**.
-- Current Frame Type values: GDP Data and Hello only.
-- No network addresses or sessions.
-- CRC-8 is the intended link-level corruption check; exact CRC parameters/packing remain to be frozen.
-- Hello is a single-flit link-local presence message.
+- Minimal hop-local data transfer.
+- First flit on an inactive allocated VC starts the segment.
+- Hop-local integrity belongs here; exact CRC packing remains draft.
+- No separate current DLP size-class registry.
 
-## Layer 3 — GDP (Global Data Protocol)
+## GDP
 
-GDP is the routed datagram layer, analogous in role to IP.
+- Routed L3 package.
+- 64-bit Source and Destination.
+- Version, Type, Size Class, Hop Limit, QoS.
+- Existing 16-value GDP package-size registry.
+- No GDP checksum, CRC, Flow Control ID, session state, receive window, or fragmentation state.
 
-- Six-flit fixed header.
-- 58-bit source address and 58-bit destination address.
-- First-flit fields: Type 4, Version 4, Size Class 4, Hop Limit 8, QoS 8.
-- Second-flit fields: Header Checksum 8, Flow Control ID 16, Reserved 5.
-- GDP Header Checksum protects the header only.
-- No session/reliability state in GDP.
-- No GDP fragmentation.
-- 4-bit Size Class gives sixteen fixed payload sizes from 0 bytes through 1 MiB.
-
-## Layer 4/5 — GNet
-
-GNet is the connection/tunnel/stream layer, analogous in role to TCP but designed around a separate tunnel and connection model.
-
-- Establishes a tunnel/connection explicitly above GDP.
-- Uses a 64-bit Tunnel ID as the persistent public tunnel identity.
-- Uses source/destination ports during connection establishment.
-- Carries receive-window/window-scale information for reliable transport.
-- Reliability, retransmission, congestion control, and final packet formats remain active design work.
-- Transport integrity belongs here rather than in GDP payload routing.
-
-## Design principle
-
-The stack should remain modular:
+## LAN products/profiles
 
 ```text
-Applications / Services
-        |
-      GNet            connection, tunnel, reliability
-        |
-       GDP            global addressing and routing
-        |
-       DLP            direct-link framing and flits
-        |
-Physical media        serial, GNet copper/fiber, telecom PHYs, etc.
+GC3  -> cheap shared 3 Mbit/s
+GS3  -> independent switched 3 Mbit/s paths
+GS10 -> independent ports negotiating 3/10 Mbit/s
 ```
 
-Other LAN technologies such as Ethernet or ARCNET can also carry GDP through an appropriate adaptation, allowing GDP/GNet to coexist with legacy physical/link networks.
+No normal GC10 exists.
+
+## Higher layers
+
+GTS and application protocols own transport/session reliability, end-to-end integrity, tunneling, streams, security, and application semantics.

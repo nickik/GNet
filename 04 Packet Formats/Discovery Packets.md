@@ -4,71 +4,47 @@ title: "Discovery Packets"
 aliases: ["SOLICIT and ADVERTISE"]
 type: packet
 status: draft
-layers: ["L2","L3"]
-tags: ["gnet","gnet/packet","gnet/status/draft","gnet/layer/l2","gnet/layer/l3"]
+layers: ["L3"]
+tags: ["gnet","gnet/packet","gnet/status/draft","gnet/layer/l3"]
 parent: "[[Packet Formats MOC]]"
-related: ["[[GCTL Protocol]]","[[Discovery and Bootstrap]]","[[Service Type Registry]]","[[32-bit Flit Format]]"]
-updated: 2026-09-02
+related: ["[[GCTL Protocol]]","[[Discovery and Bootstrap]]","[[Service Type Registry]]"]
+updated: 2026-09-03
 ---
 # Service discovery packets
 
-> [!info] Knowledge graph
-> **Up:** [[Packet Formats MOC]] · **Related:** [[GCTL Protocol]] · [[Discovery and Bootstrap]] · [[Service Type Registry]] · [[32-bit Flit Format]]
+Status: **DRAFT — logical message semantics retained; old direct-DLP flit packing superseded**
 
-Status: **DRAFT**
+Discovery is generic: Router, Directory, Terminal Server, and later services use SOLICIT/ADVERTISE with different Service Type values.
 
-Discovery is generic: Router, Directory, Terminal Server, and later services use the same SOLICIT/ADVERTISE messages with different Service Type values.
+These are **GCTL messages carried through the current GDP/GCTL bootstrap profile**. Older diagrams that embedded four-bit VCIDs into each GCTL row are no longer normative because physical-flit packing is now `VC2 + 30 carried bits` and link bootstrap/control belongs to GLCP.
 
-The following diagrams show actual 32-bit flits when the GCTL message begins directly at a DLP payload boundary. Every row contains the four-bit VCID and 28 carried bits. The DLP segment header and integrity trailer are not repeated in each diagram. When GCTL is carried inside GDP, its logical bitstream follows the GDP header and is sliced continuously rather than realigned.
-
-## SOLICIT
+## SOLICIT logical fields
 
 ```text
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  | GCTL Version  | Message Type  |     Flags [15:4]      |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  | F low |             Transaction ID [31:8]             |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |  TxID [7:0]   |         Service Type          | S hi  |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  | S lo  | Reserved = 0  |          Padding = 0          |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Version
+Message Type = SOLICIT
+Flags
+Transaction ID
+Service Type
+Scope
 ```
 
-`F low` denotes Flags bits 3–0; `S hi/lo` divide the eight-bit Scope. The final 16 carried bits are DLP padding and are not part of GCTL.
+An unconfigured endpoint first establishes GLCP, then uses the provisional/link-local GDP/GCTL bootstrap rules to solicit an authorized router. Exact bootstrap address encoding remains open.
 
-GCTL Version is draft value 1. Message Type is SOLICIT. Flags are zero until allocated. Transaction ID is a random request value. Scope values are LINK=0, ROUTER_DOMAIN=1, DISTRICT=2, and METRO=3.
-
-An unconfigured endpoint may send only `SOLICIT(Router, LINK)` using DLP link-local GCTL. A configured endpoint sends other solicitations as GDP/GCTL. Intermediaries must not expand the requested scope.
-
-## ADVERTISE
+## ADVERTISE logical fields
 
 ```text
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  | GCTL Version  | Message Type  |     Flags [15:4]      |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  | F low |             Transaction ID [31:8]             |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |  TxID [7:0]   |         Service Type          | P hi  |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |   Preference [11:0]   |   Provider Address [63:48]    |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |               Provider Address [47:20]                |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |        Provider Address [19:0]        | Life [31:24]  |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |                Lifetime [23:0]                | C hi  |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |                  Capabilities [27:0]                  |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Version
+Message Type = ADVERTISE
+Flags
+Transaction ID
+Service Type
+Preference
+Provider Address
+Lifetime
+Capabilities
 ```
 
-Message Type is ADVERTISE. Transaction ID and Service Type echo SOLICIT. Larger Preference values are preferred unless policy overrides them. Provider Address may be zero only for a router advertisement returned by physical-port identity before GDP configuration. Lifetime zero means do not cache. Capabilities is service-specific.
+ADVERTISE echoes the request transaction/service type. A provider address may use bootstrap-specific representation before ordinary address configuration. Lifetime zero means do not cache.
 
-`P hi` contains Preference bits 15–12 and `C hi` contains Capabilities bits 31–28.
-
-The logical SOLICIT message is 12 octets and occupies four VCID-tagged payload flits with 16 padding bits. ADVERTISE is 28 octets and occupies exactly eight payload flits. These layouts remain DRAFT.
+Exact field widths/packing should be re-frozen only after the revised GCTL bootstrap model is settled.

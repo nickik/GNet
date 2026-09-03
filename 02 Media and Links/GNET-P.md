@@ -1,25 +1,28 @@
 ---
 id: gnet-p
 title: "GNET-P"
-aliases: ["GNet point-to-point trunk"]
+aliases: ["GNet point-to-point trunk","GNet infrastructure link"]
 type: media
 status: draft
 layers: ["L1","L2"]
 tags: ["gnet","gnet/media","gnet/status/draft","gnet/layer/l1","gnet/layer/l2"]
 parent: "[[Media and Links MOC]]"
 related: ["[[Direct Link Protocol]]","[[Virtual Channels and VCIDs]]","[[Deployment Topology]]"]
-updated: 2026-09-02
+updated: 2026-09-03
 ---
 # GNET-P point-to-point trunk
 
-> [!info] Knowledge graph
-> **Up:** [[Media and Links MOC]] · **Related:** [[Direct Link Protocol]] · [[Virtual Channels and VCIDs]] · [[Deployment Topology]]
+Status: **ACCEPTED separate infrastructure concept and rate family; OPEN detailed framing/PHY**
 
+GNET-P provides dedicated synchronous point-to-point infrastructure links at 10, 25, and 50 Mbit/s. Initial systems may use coaxial cable; later systems may use fiber without changing GDP.
 
-Status: **ACCEPTED rate family; OPEN framing details**
+GNET-P is **not GNet-10 LAN**. The names currently overlap numerically:
 
-GNET-P provides dedicated synchronous infrastructure links at 10, 25, and 50 Mb/s. Initial systems may use coaxial cable; later systems may use fiber without changing GDP.
+- **GNet-10** — 10 Mbit/s switched four-pair LAN profile on GS10;
+- **GNet Link/10 CX / GNET-P 10** — separate point-to-point infrastructure trunk profile.
 
-Each direction is point-to-point and has an independent VCID namespace. Every 32-bit flit contains a 4-bit VCID and 28 carried bits. The link scheduler may interleave bounded segments from several VCIDs and expose service classes or reservations, but all user traffic remains DLP/GDP packet traffic. Clock recovery, line code, frame synchronization, keepalive, error monitoring, protection switching, and scheduling are OPEN.
+The trunk naming should be revisited before commercial release to avoid customer ambiguity; the distinct technical concept is retained for now.
 
-GNET-P is distinct from external GNET-L cabling and from the internal QDX bus.
+Each direction has an independent hop-local VC namespace. The baseline logical flit is VC2 (`2-bit VCID + 30 carried bits`) unless a future advanced width is explicitly negotiated. GNET-P must preserve the same receiver-credit invariant as other GNet hops: one credit represents one physical flit of guaranteed downstream capacity.
+
+Clock recovery, line code, keepalive, protection switching, control carriage, exact link integrity, and coax-to-fiber transition rules remain OPEN.

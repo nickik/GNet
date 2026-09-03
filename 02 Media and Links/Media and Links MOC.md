@@ -4,22 +4,33 @@ title: "Media and Links MOC"
 aliases: ["Media Map of Content"]
 type: moc
 status: active
-tags: ["gnet", "gnet/moc", "gnet/media", "gnet/status/active"]
+tags: ["gnet","gnet/moc","gnet/media","gnet/status/active"]
 parent: "[[GNet Home]]"
-related: ["[[Architecture MOC]]", "[[Packet Formats MOC]]"]
-updated: 2026-09-02
+related: ["[[Architecture MOC]]","[[Packet Formats MOC]]","[[Implementation MOC]]"]
+updated: 2026-09-03
 ---
 # Media and links map of content
 
-> [!info] Knowledge graph
-> **Up:** [[GNet Home]] · **Related:** [[Architecture MOC]] · [[Packet Formats MOC]]
+## Native local copper
 
-- [[Direct Link Protocol]] — common L2 bounded-segment envelope and link integrity.
-- [[Virtual Channels and VCIDs]] — 4-bit hop-local multiplexing and per-VCID state.
-- [[DLP Segment Size Classes]] — bounded 64-, 256-, and 1,024-octet DLP payload classes.
-- [[GNET-L]] — local four-pair request/grant star.
+- [[GNet PHY Profiles]] — GNet-3, GNet-10, and future GNet-20.
+- [[GNet Copper Cabling]] — installation grades and certified-cable direction.
+- [[GNet Modular Connector]] — GMC-8 mechanical/electrical connector family.
+- [[GNet Link Control Protocol]] — bootstrap, credits, grants, VC control, reset/status.
+- [[GNet Coupler]] — GC3 shared-medium behavior.
+- [[GNet Switch]] — GS3/GS10 switched behavior.
+- [[GNET-L]] — local-copper family landing page.
+
+## Common data path
+
+- [[32-bit Flit Format]] — baseline VC2 + 30 carried bits.
+- [[Virtual Channels and VCIDs]] — hop-local VC allocation and lifecycle.
+- [[Direct Link Protocol]] — minimal L2 data-path contract.
+- [[DLP Segment Size Classes]] — superseded historical DLP size-class model.
+
+## Other media
+
 - [[GNET-A]] — centrally scheduled residential access.
-- [[GNET-P]] — synchronous routed trunks.
-- [[32-bit Flit Format]] — exact 4-bit VCID plus 28-bit carried-data format.
+- [[GNET-P]] — point-to-point infrastructure/trunk family.
 
-Key decisions: [[ADR-0004 Direct Point-to-Point Link]], [[ADR-0006 GNET-L Rate]], [[ADR-0007 32-bit Flit Format]], [[ADR-0008 VCID in Every Flit]], and [[ADR-0010 DLP Segment Size Classes]].
+Key decisions: [[ADR-0007 32-bit Flit Format]], [[ADR-0011 Baseline VC2 Flit Without SOF]], [[ADR-0012 Minimum GNet-3 Compatibility Profile]], [[ADR-0013 Receiver Credits and Infrastructure Grants]], and [[ADR-0014 GC3 GS3 GS10 LAN Ladder]].

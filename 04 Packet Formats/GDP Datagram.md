@@ -1,87 +1,68 @@
 ---
 id: gdp-datagram
 title: "GDP Datagram"
-aliases: ["GDP packet"]
+aliases: ["GDP packet","GDP package"]
 type: packet
 status: draft
 layers: ["L3"]
 tags: ["gnet","gnet/packet","gnet/status/draft","gnet/layer/l3"]
 parent: "[[Packet Formats MOC]]"
-related: ["[[GDP Protocol]]","[[32-bit Flit Format]]","[[Direct Link Protocol]]"]
+related: ["[[GDP Protocol]]","[[32-bit Flit Format]]","[[Direct Link Protocol]]","[[ADR-0015 Restore Minimal GDP Header]]"]
 updated: 2026-09-03
 ---
 # GDP datagram packet
 
-> [!info] Knowledge graph
-> **Up:** [[Packet Formats MOC]] · **Related:** [[GDP Protocol]] · [[32-bit Flit Format]] · [[Direct Link Protocol]]
+Status: **FROZEN semantic field set; DRAFT exact encoding**
 
-Status: **CURRENT DRAFT**
+GDP is the Layer-3 routed datagram protocol. It contains no session, reliability, flow-control, or integrity state. Link credits belong to GLCP/DLP and transport state belongs above GDP.
 
-GDP is the Layer-3 routed datagram protocol. Transport sessions, reliability, ports, tunnel state, and end-to-end payload integrity are not GDP responsibilities; those belong to GNet or another protocol carried as GDP payload.
+## Current 20-octet encoding candidate
 
-## Six-flit GDP header
-
-Every GDP packet begins with exactly six 32-bit flits. The first flit uses the DLP first-flit Frame Type bit. Continuation flits use all 29 carried bits.
+The current compact candidate keeps a 20-octet GDP header while preserving 64-bit addresses:
 
 ```text
-    Flit 1
+    Word 1 — logical protocol word, not a physical flit
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |VCID |S|F| Type  | Ver   | Size  | Hop Limit  |      QoS      |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-    Flit 2
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |VCID |S| Header Checksum |   Flow Control ID   | Reserved     |
+   | Ver   | Type  | Size  | Hop Limit  |      QoS      |Reserved |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-    Flit 3
+    Words 2-3
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |VCID |S|            Source Address [57:29]                    |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-    Flit 4
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |VCID |S|            Source Address [28:0]                     |
+   |                       Source Address                          |
+   +                                                               +
+   |                         64 bits                               |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-    Flit 5
+    Words 4-5
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |VCID |S|          Destination Address [57:29]                 |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-    Flit 6
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |VCID |S|          Destination Address [28:0]                  |
+   |                    Destination Address                        |
+   +                                                               +
+   |                         64 bits                               |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
-Where:
+Fields are packed continuously across the baseline 30 carried bits of successive flits. A 160-bit header therefore consumes six VC2 flits and leaves 20 carried bits in the sixth flit for the beginning of the GDP payload. The exact malformed-packet rules and Version/Type/QoS registries remain DRAFT.
 
-- **VCID:** 2 bits in every flit.
-- **SOF (`S`):** 1 only on Flit 1; 0 on Flits 2–6 and payload continuation flits.
-- **Frame Type (`F`):** 1 bit in the first carried position of Flit 1. `0` means GDP data; `1` means Hello.
-
-## GDP fields
+## Fields
 
 | Field | Bits | Meaning |
 |---|---:|---|
-| Frame Type | 1 | DLP first-flit discriminator; GDP data is `0`. |
-| Type | 4 | GDP payload/protocol type registry. |
-| Version | 4 | GDP protocol version. |
-| Size Class | 4 | Selects one of 16 fixed payload sizes. |
-| Hop Limit | 8 | Decremented at every GDP router; prevents loops. |
-| QoS | 8 | Packet priority/service class. |
-| Header Checksum | 8 | Lightweight checksum over the GDP header. |
-| Flow Control ID | 16 | Flow identifier/hint available to forwarding and higher-layer logic. |
-| Reserved | 5 | Must transmit as zero; ignored on receive. |
-| Source Address | 58 | Hierarchical source GDP address. |
-| Destination Address | 58 | Hierarchical destination GDP address. |
+| Version | 4 | GDP wire version. |
+| Type | 4 | GDP payload/protocol type. |
+| Size Class | 4 | Selects one fixed GDP payload size. |
+| Hop Limit | 8 | Decremented at every GDP router. |
+| QoS | 8 | Network forwarding/service marking subject to policy. |
+| Reserved | 4 | Wire-format reserve; transmit zero, ignore on receive. |
+| Source Address | 64 | Hierarchical source GDP address. |
+| Destination Address | 64 | Hierarchical destination GDP address. |
 
-Flit 1 is intentionally exact: after Frame Type, `Type + Version + Size Class + Hop Limit + QoS` consumes all remaining 28 bits. Flit 2 consumes `8 + 16 + 5 = 29` carried bits. Each 58-bit address then consumes exactly two complete 29-bit continuation flits.
+GDP contains **no header checksum, CRC, Flow Control ID, session ID, fragmentation state, or option chain**.
 
-## Payload size classes
+## GDP package size classes
 
-The four-bit Size Class gives sixteen fixed GDP payload budgets:
+This is the current four-bit GDP package-size registry. It replaces the superseded DLP Segment Class scheme.
 
 | ID | Name | Payload bytes |
 |---:|---|---:|
@@ -102,18 +83,12 @@ The four-bit Size Class gives sixteen fixed GDP payload budgets:
 | 14 | `jumbogram256K` | 262144 |
 | 15 | `jumbogram1M` | 1048576 |
 
-Class 1 is the smallest non-empty class and is intended to represent approximately one additional carried-data flit. The receiver determines the expected GDP payload size solely from Size Class.
-
-## Header checksum
-
-GDP contains an 8-bit header checksum for accidental header-corruption detection. It protects GDP routing/header information only, not the payload. The checksum algorithm is intentionally lightweight; the exact normative arithmetic definition should be kept consistent across all implementations.
-
-Link-level corruption detection remains the responsibility of DLP. End-to-end payload integrity and reliability belong to GNet or another GDP-carried protocol.
+A physical/link profile MAY restrict which GDP classes it accepts. In particular GC3 deliberately excludes large/jumbo classes; see [[GNet Coupler]].
 
 ## Processing rules
 
-- A router validates the GDP header before forwarding.
-- A router decrements Hop Limit on forwarding. A packet whose Hop Limit expires is dropped; a higher-level diagnostic/error protocol may report the condition.
-- Reserved bits must be zero when transmitted and ignored by receivers for forward compatibility.
-- Source and Destination addresses are transmitted most-significant bit first.
-- GDP itself does not fragment packets. Path/link capability must constrain usable Size Classes where required.
+- A router decrements Hop Limit before forwarding; expiry discards the packet.
+- GDP itself does not fragment a package.
+- Source and Destination are transmitted most-significant bit first.
+- Link/profile capability constrains usable Size Classes where required.
+- Header corruption is handled by hop-local DLP integrity; GDP does not add a second checksum.

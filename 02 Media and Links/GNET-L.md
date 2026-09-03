@@ -1,38 +1,32 @@
 ---
 id: gnet-l
 title: "GNET-L"
-aliases: ["GNet local star"]
+aliases: ["GNet local star","GNet local copper"]
 type: media
 status: accepted
 layers: ["L1","L2"]
 tags: ["gnet","gnet/media","gnet/status/accepted","gnet/layer/l1","gnet/layer/l2"]
 parent: "[[Media and Links MOC]]"
-related: ["[[Direct Link Protocol]]","[[Virtual Channels and VCIDs]]","[[ADR-0006 GNET-L Rate]]"]
-updated: 2026-09-02
+related: ["[[GNet PHY Profiles]]","[[GNet Coupler]]","[[GNet Switch]]","[[GNet Link Control Protocol]]"]
+updated: 2026-09-03
 ---
-# GNET-L local star
+# GNET-L local copper LAN
 
-> [!info] Knowledge graph
-> **Up:** [[Media and Links MOC]] · **Related:** [[Direct Link Protocol]] · [[Virtual Channels and VCIDs]] · [[ADR-0006 GNET-L Rate]]
+Status: **ACCEPTED architecture; electrical margins remain under validation**
 
+GNET-L is the native four-pair local GNet attachment used by terminals, workstations, minicomputers, servers, Couplers, and Switches.
 
-Status: **ACCEPTED physical plan; OPEN electrical encoding**
+The universal profile is [[GNet PHY Profiles|GNet-3]]. Higher-capability endpoints may negotiate GNet-10 on a GS10 port.
 
-GNET-L connects terminals, workstations, minicomputers, and local servers to a passive or active star hub. The current target line rate is **3 Mb/s**.
+```text
+Pair 1   CONTROL-UP      endpoint -> GC/GS
+Pair 2   CONTROL-DOWN    GC/GS -> endpoint
+Pair 3   DATA-UP         endpoint -> GC/GS
+Pair 4   DATA-DOWN       GC/GS -> endpoint
+```
 
-## Four-pair connector plan
+The connector is [[GNet Modular Connector|GMC-8]]. Cable qualification is defined in [[GNet Copper Cabling]].
 
-| Pair | Direction/function |
-|---|---|
-| 1 | endpoint request / hub permission control |
-| 2 | endpoint-to-hub data |
-| 3 | hub-to-endpoint data |
-| 4 | reserved for later clocking, power/control, redundancy, or increased capacity |
+GNET-L itself does not define a product topology. A [[GNet Coupler|GC3]] presents one centrally arbitrated shared data resource; a [[GNet Switch|GS3/GS10]] presents independent switched paths.
 
-The connector family is the eight-position modular connector commonly described as RJ-45; the exact pinout is OPEN.
-
-An endpoint raises REQUEST. The hub selects a requester and returns PERMISSION; only the granted endpoint transmits upstream. Downstream delivery is dedicated per star leg. This is collision-free and gives the hub intrinsic physical port identity.
-
-Every transferred 32-bit flit contains a 4-bit VCID and 28 carried bits. The physical star leg supplies endpoint identity; the VCID identifies one active bounded DLP segment in that direction and permits the scheduler to interleave control, real-time, and bulk traffic.
-
-Passive hubs are planned in 4/8/16/32/64-port forms. An active hub/router adds buffering, GDP forwarding, at least one uplink, and a management console. Electrical loading and whether larger passive sizes require repeated stages are OPEN.
+The former generic "passive/active hub" terminology is superseded by Coupler and Switch because the two devices have materially different scheduling and forwarding behavior.

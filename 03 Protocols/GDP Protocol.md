@@ -7,27 +7,26 @@ status: mixed
 layers: ["L3"]
 tags: ["gnet","gnet/protocol","gnet/status/mixed","gnet/layer/l3"]
 parent: "[[Protocols MOC]]"
-related: ["[[GDP Datagram]]","[[Addressing and Routing]]","[[ADR-0002 Minimal GDP Header]]","[[ADR-0009 No GDP Integrity Field]]"]
-updated: 2026-09-02
+related: ["[[GDP Datagram]]","[[Addressing and Routing]]","[[ADR-0002 Minimal GDP Header]]","[[ADR-0015 Restore Minimal GDP Header]]"]
+updated: 2026-09-03
 ---
 # GNet Datagram Protocol (GDP)
 
-> [!info] Knowledge graph
-> **Up:** [[Protocols MOC]] · **Related:** [[GDP Datagram]] · [[Addressing and Routing]] · [[ADR-0002 Minimal GDP Header]] · [[ADR-0009 No GDP Integrity Field]]
+Status: **FROZEN semantic field set; DRAFT encoding**
 
-
-Status: **FROZEN field set; DRAFT encoding**
-
-GDP is the common routed L3 protocol. Its header is fixed and deliberately contains only six fields.
+GDP is the common routed Layer-3 protocol. Its header remains deliberately minimal.
 
 ## Required semantics
 
 - **Version** selects the GDP wire version.
 - **Type** identifies the payload protocol.
+- **Size Class** identifies the fixed GDP package payload size.
 - **Hop Limit** is decremented at each GDP router; a packet reaching zero is discarded.
-- **QoS** selects forwarding and scheduling behavior, subject to local policy.
+- **QoS** selects forwarding/service treatment subject to local policy.
 - **Source** and **Destination** are 64-bit GDP addresses.
 
-GDP MUST NOT acquire length, checksum, CRC, hash, integrity flag, integrity trailer, fragmentation, options, flow/session ID, sequence numbers, acknowledgments, or encryption metadata. DLP supplies segment length and hop-local integrity; endpoints supply end-to-end integrity and the remaining functions above GDP.
+GDP MUST NOT acquire a payload-length field, checksum, CRC, hash, integrity flag/trailer, fragmentation state, options, flow/session ID, sequence number, acknowledgement, receive window, or encryption metadata.
 
-The current encoding is exactly 20 octets and is defined in [[GDP Datagram]]. It is not five transmitted flits: DLP carries the 160 header bits across six 28-bit carried regions, each prefixed by a 4-bit VCID. The sixth region may also contain the first eight payload bits. Protocol Type and QoS allocations are DRAFT.
+DLP/GLCP supply hop-local transfer framing, integrity, credits, and scheduling. Endpoints supply end-to-end integrity, reliability, fragmentation/reassembly where required, and session state above GDP.
+
+The current 20-octet wire-layout candidate is defined in [[GDP Datagram]]. The semantic rule is more important than the current bit packing: GDP is routing metadata plus package size, not a transport or link-flow protocol.

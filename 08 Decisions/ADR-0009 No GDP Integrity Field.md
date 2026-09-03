@@ -7,21 +7,19 @@ status: superseded
 layers: ["L3"]
 tags: ["gnet","gnet/decision","gnet/status/superseded","gnet/layer/l3"]
 parent: "[[Decisions MOC]]"
-related: ["[[GDP Protocol]]","[[GDP Datagram]]","[[Direct Link Protocol]]"]
+related: ["[[GDP Protocol]]","[[GDP Datagram]]","[[ADR-0015 Restore Minimal GDP Header]]"]
 updated: 2026-09-03
 ---
-# Decision 0009: GDP has no integrity field
+# Decision 0009: GDP has no integrity field — historical record
 
-Status: **SUPERSEDED 2026-09-03**
+Status: **SUPERSEDED as a historical ADR; outcome restored by ADR-0015**
 
-This decision formerly removed all integrity fields from GDP. It is retained for historical context but is no longer normative.
+ADR-0009 originally removed checksum/integrity fields from GDP. An intermediate 2026-09-03 draft later introduced an 8-bit GDP header checksum and Flow Control ID, temporarily making this ADR appear superseded.
 
-The current GDP header includes an **8-bit lightweight header checksum**. It protects routed GDP header information against accidental corruption but does not protect the GDP payload and is not a security mechanism.
+That intermediate design conflicted with the minimal GDP layer boundary and with the decision to keep receiver credits in GLCP/DLP. [[ADR-0015 Restore Minimal GDP Header]] therefore restores the no-GDP-checksum outcome while recording the intervening design history.
 
-The current integrity split is:
+Current integrity split:
 
-- DLP: link-level CRC-8 for physical/link corruption detection.
-- GDP: 8-bit header checksum for the routed header.
-- GNet or another GDP-carried protocol: end-to-end payload integrity/reliability as required.
-
-See [[GDP Datagram]] and [[Direct Link Protocol]] for the current format.
+- DLP: hop-local accidental-error detection;
+- GDP: no checksum/CRC/integrity field;
+- GTS or another higher layer: end-to-end integrity/reliability where required.

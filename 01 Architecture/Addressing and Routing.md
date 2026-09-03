@@ -8,42 +8,40 @@ layers: ["L3"]
 tags: ["gnet","gnet/architecture","gnet/status/mixed","gnet/layer/l3"]
 parent: "[[Architecture MOC]]"
 related: ["[[GDP Protocol]]","[[Address Configuration Packets]]"]
-updated: 2026-09-02
+updated: 2026-09-03
 ---
 # Addressing and routing
 
-> [!info] Knowledge graph
-> **Up:** [[Architecture MOC]] · **Related:** [[GDP Protocol]] · [[Address Configuration Packets]]
-
-
-Status: **FROZEN principles; OPEN bit allocation and routing protocol**
+Status: **FROZEN principles; OPEN bit allocation and routing wire protocol**
 
 ## Address model
 
-A GDP address is an unsigned 64-bit global address. Prefixes aggregate administratively and geographically. The working hierarchy is:
+A GDP address is an unsigned 64-bit global address. Prefixes aggregate administratively and geographically.
 
-`Region / Metro / District / Neighbourhood-or-Facility / Customer / Device`
+The preferred human-facing hierarchy uses terms such as:
 
-This is a semantic hierarchy, not yet a frozen bit partition. Variable prefix lengths allow organizations, campuses, households, and mobile providers to receive appropriately sized blocks. Every retail customer MUST receive a prefix leaving at least eight device bits.
+```text
+Top / Org / Division / ... / Device
+```
 
-Zero is reserved for an unconfigured source. All-ones values are not defined as global broadcast addresses.
+The exact intermediate levels and bit partition remain open; `Top`, `Org`, and `Division` replace older `Region`/`Facility` terminology in current design prose. Variable prefix lengths let organizations, campuses, households, and providers receive appropriately sized blocks. Every retail/customer delegation must leave useful local suffix space.
+
+Zero is reserved for an unconfigured/provisional source where a bootstrap profile explicitly permits it. GNet does not define an Ethernet-style global broadcast address.
 
 ## Local configuration
 
-1. A device discovers a router without requiring a GDP address.
-2. The router advertises a customer/link prefix and minimum suffix width.
-3. The device chooses a random suffix, normally at least eight bits.
-4. The device sends ADDRESS_CLAIM directly to the router.
-5. The router accepts the address or rejects a collision and supplies configuration lifetime information.
+1. GLCP establishes the physical/link relationship and capabilities.
+2. The endpoint discovers an authorized router using the network bootstrap profile.
+3. The router advertises/delegates a prefix and policy information.
+4. The endpoint claims/configures an address under that delegation.
+5. Subsequent status/configuration reflects changes to the endpoint/router state.
 
-Physical port identity is useful input to policy, but is not a globally visible MAC address.
+Physical port identity is useful local policy input but is not a globally visible MAC address.
 
 ## Routing
 
-Forwarding uses longest/deepest prefix match. A route identifies an egress link, next router, cost, allowed service classes, and validity. Horizontal peering is permitted at every hierarchy level; a parent/top-level router is fallback, not a mandatory transit point.
+Forwarding uses longest/deepest prefix match. A route identifies an egress link/next hop plus policy/metric/validity information.
 
-The proposed inter-domain protocol, provisionally **G-RIB/GNet-PGP**, advertises reachable prefixes, policy/cost, and a path or equivalent loop-prevention value. Its wire protocol and convergence rules remain OPEN.
+Routing capability is **not exclusive to a dedicated router product**. Any capable and authorized GNet host may advertise reachability or delegated prefixes. Dedicated routers package forwarding performance, many interfaces, management, and WAN/trunk functions.
 
-## Mobility
-
-Identity and current routing location must be separable enough to support roaming. Whether this uses stable endpoint addresses, home registrars, temporary care-of addresses, or directory/session indirection remains OPEN. NAT is not an acceptable mobility mechanism.
+Horizontal peering is permitted; a parent/top-level route is fallback, not mandatory transit. The exact route-exchange protocol, authentication, convergence, loop prevention, and delegation encoding remain OPEN.
