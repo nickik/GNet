@@ -4,47 +4,50 @@ title: "Discovery and Bootstrap"
 aliases: ["GNet bootstrap"]
 type: architecture
 status: mixed
-layers: ["L2","L3","L6"]
-tags: ["gnet","gnet/architecture","gnet/status/mixed","gnet/layer/l2","gnet/layer/l3","gnet/layer/l6"]
+layers: ["L1","L3","L6"]
+tags: ["gnet","gnet/architecture","gnet/status/mixed"]
 parent: "[[Architecture MOC]]"
-related: ["[[Discovery Packets]]","[[Address Configuration Packets]]","[[GNet Service Model]]"]
-updated: 2026-09-02
+related: ["[[GNet Link Control Protocol]]","[[Discovery Packets]]","[[Address Configuration Packets]]","[[GNet Service Model]]"]
+updated: 2026-09-03
 ---
 # Discovery and bootstrap
 
-> [!info] Knowledge graph
-> **Up:** [[Architecture MOC]] · **Related:** [[Discovery Packets]] · [[Address Configuration Packets]] · [[GNet Service Model]]
+Status: **ACCEPTED sequence; DRAFT network-control encodings/trust**
 
+GNet separates link bootstrap from network discovery.
 
-Status: **ACCEPTED sequence; DRAFT packets**
+## Link bootstrap
 
-## Scope rule
+GLCP first establishes:
 
-GNet does not broadcast discovery into the routed network. An unconfigured endpoint may issue one local SOLICIT that the attached hub or link presents to eligible local providers. Each ADVERTISE is returned directly to that endpoint/physical port. Further queries are unicast GDP packets.
+1. physical/link synchronization;
+2. Minimum GNet-3 compatibility;
+3. endpoint/infrastructure presence;
+4. capability and rate selection;
+5. usable control/data state.
 
-## Generic discovery
+REQUEST/CREDIT/GRANT and other link-control operations remain GLCP and never become GDP discovery messages.
 
-SOLICIT and ADVERTISE carry a registered service type. Initial service types include Router, Directory, Terminal Server, Boot Server, Time, Identity, and Network Management. This avoids a new link mechanism for every future bootstrap service.
+## Network bootstrap
 
-## Preferred boot sequence
+After link establishment, an unconfigured endpoint uses a tightly scoped provisional/link-local GDP/GCTL bootstrap exchange to discover an authorized router and obtain/delegate network addressing information. Exact provisional GDP addressing is still DRAFT.
 
-1. Link activation and physical port identification.
-2. `SOLICIT(Router)` over link-local GCTL.
-3. Direct `ADVERTISE(Router)` from one or more routers.
-4. Address offer, random suffix selection, claim, and confirmation.
-5. Authentication/terminal registration when policy requires it.
-6. `SOLICIT(Directory)` as a unicast or tightly scoped GDP control request.
-7. Directory lookup for a named service such as terminal, boot, file, or RPC. Results may rank several local or remote providers by policy, load, and capability.
-8. End-to-end session establishment with the selected service.
+Preferred sequence:
 
-A ROM terminal may use a local terminal server directly only as a defined fallback when no directory is reachable. It must not search the whole internet for a terminal server.
+1. GLCP link activation and physical port identity.
+2. GDP/GCTL `SOLICIT(Router)` with link-local/provisional scope.
+3. Direct/tightly scoped `ADVERTISE(Router)` responses.
+4. prefix/address offer, claim, and confirmation.
+5. authentication/terminal registration when policy requires it.
+6. ordinary routed GDP/GCTL or directory queries for Directory, Terminal Server, Boot, Time, Identity, and other services.
+7. end-to-end session establishment with the selected service.
 
-## Directory hierarchy
+GNet does not flood discovery into the routed network. Scope may not be silently expanded by intermediaries.
 
-District registrars maintain current device and local-service reachability. Metro registries identify the correct district. Ordinary name resolution is a normal routed packet service, not a permanent function of the physical control pair.
+## Directory boundary
 
-A directory service record should expose the logical service name and type, address candidates, terminal/application classes, authentication method, load/preference, location, access group, and lifetime. The endpoint asks for services visible to the current device or authenticated user.
+Directory services map logical names to providers after basic network reachability exists. A ROM terminal may use a local terminal server as a defined fallback, but this does not turn the physical control pair into a directory protocol.
 
-## Failure behavior
+## Failure/trust
 
-Solicitations use a randomized retry interval. Multiple advertisements are ranked by service preference and reachability; the exact timer, preference algorithm, caching rules, and trust model remain OPEN.
+Solicitations use randomized retry. Multiple advertisements are ranked by policy/preference/reachability. Router bootstrap trust, exact timers, caching, and multi-router coordination remain OPEN.
