@@ -3,91 +3,71 @@ id: direct-link-protocol
 title: "Direct Link Protocol"
 aliases: ["DLP","GNET-LINK"]
 type: protocol
-status: mixed
+status: draft
 layers: ["L2"]
-tags: ["gnet","gnet/protocol","gnet/status/mixed","gnet/layer/l2"]
+tags: ["gnet","gnet/protocol","gnet/status/draft","gnet/layer/l2"]
 parent: "[[Media and Links MOC]]"
-related: ["[[32-bit Flit Format]]","[[Virtual Channels and VCIDs]]","[[DLP Segment Size Classes]]","[[GDP Protocol]]","[[ADR-0004 Direct Point-to-Point Link]]"]
-updated: 2026-09-02
+related: ["[[32-bit Flit Format]]","[[GDP Datagram]]","[[Virtual Channels and VCIDs]]","[[ADR-0004 Direct Point-to-Point Link]]"]
+updated: 2026-09-03
 ---
-# Direct Link Protocol (DLP / GNET-LINK)
+# Direct Link Protocol (DLP)
 
 > [!info] Knowledge graph
-> **Up:** [[Media and Links MOC]] · **Related:** [[32-bit Flit Format]] · [[Virtual Channels and VCIDs]] · [[DLP Segment Size Classes]] · [[GDP Protocol]]
+> **Up:** [[Media and Links MOC]] · **Related:** [[32-bit Flit Format]] · [[GDP Datagram]]
 
-Status: **FROZEN role, 4-bit VCID, and size classes; DRAFT integrity encoding**
+Status: **CURRENT DRAFT**
 
-DLP is the common L2 envelope used by GNET-L, GNET-A, and GNET-P. It multiplexes bounded segments with a hop-local VCID, identifies the carried protocol, delimits the carried bitstream, and detects link corruption. The medium supplies physical transmitter, receiver, port, or premise-channel identity.
+DLP is the minimal Layer-2 protocol for direct links. It deliberately avoids network addressing, sessions, routing semantics, and application/service semantics. Those belong to GDP and protocols above GDP.
 
-## Fundamental flit rule
+## Fundamental flit format
 
-Every transmitted GNet flit is exactly 32 bits. Bits 0–3 are the VCID and bits 4–31 carry 28 bits of header, payload, padding, or trailer data.
-
-```text
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |                  Carried bits [27:0]                  |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-```
-
-The VCID is part of the 32-bit flit. It is not sideband and does not create a 36-bit transfer. Consequently, a flit carries exactly 28 bits of protocol data.
-
-## Draft segment encoding
+Every transmitted flit is exactly 32 bits:
 
 ```text
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |   Protocol    |LC |SC |    Payload Length (octets)    |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |                 Payload bits 0 .. 27                  |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |                Payload bits 28 .. 55                  |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |                          ...                          |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  | Last payload bits; trailing padding MUST be zero      |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |     CRC-8     |             Reserved = 0              |
+   |VCID |S|                 Carried bits [28:0]                   |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
-The header uses 8 carried bits for **Protocol**, 2 for **Link Class** (LC), 2 for **Segment Class** (SC), and 16 for **Payload Length**. Payload Length is the exact number of meaningful octets in the carried protocol bitstream and excludes padding and the trailer.
+- **VCID:** 2-bit hop-local Virtual Channel Identifier.
+- **SOF:** 1 for the first flit of a frame, 0 for continuation flits.
+- **Carried bits:** 29 bits.
 
-Segment Class bounds the segment's meaningful payload length:
+On the first flit only, the first carried bit is the one-bit **Frame Type** discriminator. Thus the first flit has 28 protocol-specific carried bits after Frame Type. Continuation flits have all 29 carried bits available.
 
-- `00` — **Small:** at most 64 octets.
-- `01` — **Normal:** at most 256 octets.
-- `10` — **Large:** at most 1,024 octets.
-- `11` — reserved.
+## Frame Type
 
-The size class bounds buffer reservation and VCID holding time; Payload Length gives the exact byte count, including a final segment shorter than its class limit. See [[DLP Segment Size Classes]].
+The initial registry is intentionally minimal:
 
-For a payload of N octets, the number of payload flits is:
+- `0` — GDP data frame.
+- `1` — Hello frame.
+
+Anything more complex than link-local Hello should normally be represented as GDP data and implemented above GDP instead of creating additional DLP frame types.
+
+## Hello
+
+Hello is a single-flit, link-local presence frame. It is never routed and carries no source/destination addresses, timing interval, routing table, or session state.
 
 ```text
-K = ceil((8 × N) / 28) = ceil((2 × N) / 7)
+[ VCID:2 | SOF=1 | FrameType=1 | Type:4 | Version:4 | Reserved:12 | Checksum:8 ]
 ```
 
-The complete segment uses `K + 2` flits. The last payload flit has between zero and 27 trailing zero-padding bits. Protocol octets are packed most-significant bit first without inserting alignment between flits.
+The reserved bits transmit as zero. The 8-bit checksum is the final field of the Hello flit.
 
-## VCID operation
+## GDP carriage
 
-- The first flit using an inactive VCID is its segment header.
-- Every following payload and trailer flit repeats the same VCID.
-- Flits belonging to different active VCIDs may be interleaved on a common link.
-- Payload Length tells the receiver how many payload flits belong to the segment.
-- Reception of the counted trailer completes the segment and releases the VCID for reuse.
-- A VCID has meaning only on one link, in one direction, and—on a shared medium—within the physical transmitter or premise-channel context.
-- A router terminates the incoming VCID and chooses a new VCID for the outgoing link.
+For GDP, Frame Type is `0`. The GDP header occupies six flits. Flit 1 uses the remaining 28 first-flit bits exactly; Flit 2 uses all 29 carried bits; two 58-bit addresses then occupy four complete continuation flits. See [[GDP Datagram]].
 
-The detailed allocation handshake, reserved VCID values, timeout/recovery behavior, relation to a persistent Link Flow ID, and Link Class meanings remain OPEN. See [[Virtual Channels and VCIDs]].
+## Integrity
 
-## Integrity boundary
+DLP uses an **8-bit CRC** as its link-level accidental-error detector. This is intended to detect corruption caused by the physical link, including marginal or overly long serial links, while remaining inexpensive in early hardware.
 
-The current trailer draft carries CRC-8 in the first eight carried bits and zero in the remaining 20. The CRC belongs to DLP, not GDP. Its polynomial, initialization, reflection, exact coverage of repeated VCID bits, and whether a full 28-bit or multi-flit check is preferable remain OPEN.
+The exact CRC-8 polynomial, initialization/reflection convention, and final placement in multi-flit DLP frames remain to be frozen. Hello additionally contains its own single-flit 8-bit checksum as specified above. GDP carries a separate lightweight header checksum for its routed header; GNet or another higher layer is responsible for end-to-end payload integrity when required.
 
-Preamble, synchronization, idle symbols, and request/grant signaling are physical-medium concerns and are not represented as DLP payload bits.
+## Link semantics
 
-DLP has no universal MAC source or destination fields. Point-to-point wiring, a hub port, a GNET-A premise channel, or a GNET-P trunk supplies local delivery identity. Link-local fanout is an explicit control operation, never learned switching.
+DLP assumes direct adjacency. Local physical identity comes from the actual point-to-point connection, router port, premise channel, or equivalent medium-specific endpoint. DLP therefore has no MAC source or destination address fields.
+
+VCID state is hop-local and is replaced/terminated at forwarding nodes. The link scheduler may interleave flits from different VCIDs according to the medium and flow-control rules.
