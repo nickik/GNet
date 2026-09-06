@@ -12,7 +12,7 @@ updated: 2026-09-06
 ---
 # GLCP control flits
 
-Status: **ACCEPTED GNet 0.1 bootstrap and address-announcement encoding**
+Status: **ACCEPTED GNet 0.1 bootstrap, address-announcement, and router-registration encoding**
 
 GLCP uses its dedicated CONTROL-UP and CONTROL-DOWN pairs. A GLCP control flit is exactly **32 logical bits**, sent most-significant bit first. It is not a DLP data flit: it has no VCID and does not consume DLP credit or grant state. The 2-bit VCID exists only on the 34-bit DLP data flit, not on either control pair.
 
@@ -128,3 +128,40 @@ The infrastructure responds with one `ADDRESS_ANNOUNCE_ACK` flit:
 `status=0` means accepted; `1` means rejected; `2–3` are reserved. The ACK sender generation is the infrastructure generation established by HELLO. A client accepts it only for its one outstanding announcement and only when that generation equals its established peer generation.
 
 A Coupler acknowledges receipt but does not retain an address-to-port forwarding table: its data medium is shared and recipients filter by GDP destination. A Switch acknowledges after installing the address-to-ingress-port attachment mapping; it discards mappings learned from a port on link-down or RESET.
+
+## ROUTER_PRESENT
+
+A router first completes ordinary HELLO and CAPABILITIES negotiation and announces
+its link-local address with `ADDRESS_ANNOUNCE`.  It then registers that already
+announced address as a router with its directly attached Switch.  This is
+hop-local GLCP registration, not a routed router advertisement and not address
+configuration.  A Coupler has no router table and does not use this message.
+
+`ROUTER_PRESENT` is three consecutive control flits:
+
+| Part | Opcode | Address bits | Remaining bits |
+|---|---:|---|---|
+| 0 | `0x5` | — | `version:4`, `sgen:6`, reserved (18) |
+| 1 | continuation | `A[63:32]` (32) | — |
+| 2 | continuation | `A[31:0]` (32) | — |
+
+Part 0 is `opcode:4 | version:4 | sgen:6 | reserved:18`; parts 1 and 2 are
+the complete 64-bit link-local address, most-significant word first.  They are
+valid only immediately after a valid Part 0.  The Switch accepts the request
+only when the address is already mapped to this physical port by
+`ADDRESS_ANNOUNCE`.
+
+The Switch responds with one `ROUTER_PRESENT_ACK`:
+
+```text
+31      28 27      24 23          18 17  16 15                 0
++----------+----------+--------------+------+------+--------------------+
+| opcode=6 | version=1|     SGEN     | status |      reserved      |
++----------+----------+--------------+------+------+--------------------+
+     4 bits     4 bits       6 bits    2 bits        16 bits
+```
+
+`status=0` is accepted and `status=1` is rejected; values `2–3` are reserved.
+The ACK uses the Switch sender generation.  A router accepts it only for its
+one outstanding registration and only if that generation equals its established
+peer generation.  Registration is removed when that port resets or goes down.
