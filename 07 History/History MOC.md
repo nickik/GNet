@@ -7,7 +7,7 @@ status: active
 tags: ["gnet", "gnet/moc", "gnet/history", "gnet/status/active"]
 parent: "[[GNet Home]]"
 related: ["[[Decisions MOC]]", "[[Specification Status]]"]
-updated: 2026-09-03
+updated: 2026-09-06
 ---
 # History map of content
 
@@ -16,5 +16,6 @@ updated: 2026-09-03
 
 - [[Project Chat Audit]] — recovered, superseded, and still-conflicting project decisions.
 - [[GNet-Dominant Networking Evolution]] — consequences of GNet replacing Ethernet/IP: routed LANs, telephony/QoS, MPLS/SDN differences, mobility, VPNs, and security evolution.
+- [[SPIDER and Datakit]] — Bell Labs packet-network experiments, Datakit virtual circuits, comparison with GNet, and the openness/ecosystem lessons from their failure to become dominant standards.
 - [[Decisions MOC]] — durable architecture choices extracted from the discussions.
 - [[Specification Status]] — current precedence rules.
