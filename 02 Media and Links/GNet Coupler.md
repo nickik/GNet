@@ -8,7 +8,7 @@ layers: ["L1","L2"]
 tags: ["gnet","gnet/media","gnet/status/accepted","gnet/coupler"]
 parent: "[[Media and Links MOC]]"
 related: ["[[GNet Link Control Protocol]]","[[GNet PHY Profiles]]","[[Minimum GNet-3 NIC]]","[[GNet Switch]]"]
-updated: 2026-09-03
+updated: 2026-09-06
 ---
 # GNet Coupler
 
@@ -27,7 +27,7 @@ There is deliberately **no general-purpose GC10 LAN profile**. Sites needing mor
 
 ## Data path
 
-GC3 provides one shared 3 Mbit/s data resource. It does not need packet-store memory, a GDP route table, or a general-purpose routing CPU.
+GC3 provides one shared 3 Mbit/s **flit-data** resource. It does not need packet-store memory, a GDP route table, or a general-purpose routing CPU.
 
 It maintains only small active-flow state such as:
 
@@ -52,6 +52,8 @@ The baseline maximum NORMAL scheduling quantum is **8 flits**. This is a schedul
 ```text
 GNet-3: 8 × 32 / 3,000,000 ≈ 85.3 µs
 ```
+
+The calculation uses the GNet-3 **32-bit flit-data rate**. A PHY carrying baseline VC2 metadata inline transmits the corresponding extra link bits at the higher required link-bit rate, so the scheduling interval remains 85.3 microseconds at the named 3 Mbit/s flit-data rate.
 
 The GC MAY grant fewer than eight flits when the packet has fewer remaining or when receiver credit is smaller.
 

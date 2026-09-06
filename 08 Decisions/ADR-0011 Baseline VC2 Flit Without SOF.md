@@ -3,20 +3,20 @@ id: adr-0011-baseline-vc2-flit-without-sof
 title: "ADR-0011 Baseline VC2 Flit Without SOF"
 aliases: ["Decision 0011","VC2 baseline"]
 type: decision
-status: accepted
+status: superseded
 layers: ["L1","L2"]
-tags: ["gnet","gnet/decision","gnet/status/accepted","gnet/layer/l2"]
+tags: ["gnet","gnet/decision","gnet/status/superseded","gnet/layer/l2"]
 parent: "[[Decisions MOC]]"
-related: ["[[32-bit Flit Format]]","[[Virtual Channels and VCIDs]]","[[ADR-0007 32-bit Flit Format]]","[[ADR-0008 VCID in Every Flit]]"]
-updated: 2026-09-03
+related: ["[[32-bit Flit Format]]","[[Virtual Channels and VCIDs]]","[[ADR-0007 32-bit Flit Format]]","[[ADR-0008 VCID in Every Flit]]","[[ADR-0017 32-bit Data Flit and PHY Phits]]"]
+updated: 2026-09-06
 ---
-# Decision 0011: Baseline VC2 flit has no SOF bit
+# Decision 0011: Historical packed VC2 flit without SOF
 
-Status: **ACCEPTED 2026-09-03**
+Status: **SUPERSEDED by ADR-0017**
 
-## Decision
+## Historical decision
 
-The baseline physical flit is:
+ADR-0011 defined the baseline transmitted unit as:
 
 ```text
 32 bits total
@@ -25,23 +25,22 @@ The baseline physical flit is:
 no SOF bit
 ```
 
-The first data flit received on an inactive allocated VC implicitly begins a DLP segment. Completion, ABORT, timeout, or reset releases that VC context.
+The first data flit received on an inactive allocated VC implicitly began a DLP segment. Completion, ABORT, timeout, or reset released that VC context.
 
-GNet-3 and GNet-10 use this VC2 profile. The current GNet-20 concept also assumes VC2.
+## What survives
 
-A future advanced profile MAY negotiate:
+[[ADR-0017 32-bit Data Flit and PHY Phits]] supersedes the `2 + 30 = 32 total` field allocation but retains:
 
-```text
-VC4 = 4-bit VCID + 28 carried bits
-```
+- baseline VC2 with four hop-local wire VCIDs;
+- a VC identity associated with every data flit;
+- no SOF bit;
+- implicit segment start on the first flit of an inactive allocated VC;
+- VC termination/reassignment at forwarding nodes.
 
-but no endpoint may assume VC4 before successful capability negotiation.
+The current baseline is therefore **32 data bits per flit plus an associated 2-bit VCID**, with the PHY defining how the two are physically conveyed.
 
-## Consequences
+VC4 or VC8 may exist only as future negotiated wider-VC options and must retain the 32-bit flit data width.
 
-- four baseline wire VCIDs are available;
-- baseline carried capacity rises to 30 bits/flit;
-- start state is derived from link-control allocation plus VC activity instead of spending a permanent SOF bit;
-- packet/protocol fields may cross physical-flit boundaries.
+## Consequence of supersession
 
-This supersedes the field-allocation parts of ADR-0008 while retaining ADR-0007's 32-bit total width.
+The old requirement that protocol fields be packed across 30-bit carried regions is removed. Current 32-bit protocol words can align naturally with 32-bit data flits.

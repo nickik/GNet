@@ -8,7 +8,7 @@ layers: ["L1","L2"]
 tags: ["gnet","gnet/media","gnet/trunk","gnet/status/draft"]
 parent: "[[Media and Links MOC]]"
 related: ["[[Direct Link Protocol]]","[[Virtual Channels and VCIDs]]","[[GNet Broadband Access]]"]
-updated: 2026-09-03
+updated: 2026-09-06
 ---
 # GNet Carrier Trunk (GCT)
 
@@ -18,7 +18,7 @@ A GCT link is a routed or infrastructure adjacency, not a LAN segment.
 
 ## Initial family
 
-| Profile | Capacity per direction | Medium | Intended role |
+| Profile | Flit-data capacity per direction | Medium | Intended role |
 |---|---:|---|---|
 | `GCT10-CX` | 10 Mbit/s | dual coax | early/low-cost owned trunk |
 | `GCT25-CX` | **25 Mbit/s** | dual hardline coax | standard first-generation carrier trunk |
@@ -28,21 +28,21 @@ A GCT link is a routed or infrastructure adjacency, not a LAN segment.
 | `GCT-56` | 56/64 kbit/s | leased digital carrier | remote/backup |
 | `GCT-T1` | 1.544 Mbit/s | DS1/T1 | leased carrier |
 
-The rate is the usable directional GNet link target unless a profile says otherwise.
+The rate is the usable directional GNet **32-bit flit-data** target unless a profile says otherwise. The physical line/symbol rate additionally carries VC metadata, framing, coding, and other PHY overhead.
 
 ## GCT25-CX baseline
 
 The preferred first owned carrier trunk is **GCT25-CX**:
 
 ```text
-25 Mbit/s endpoint A -> endpoint B
-25 Mbit/s endpoint B -> endpoint A
+25 Mbit/s flit data endpoint A -> endpoint B
+25 Mbit/s flit data endpoint B -> endpoint A
 
 Coax A: one direction
 Coax B: opposite direction
 ```
 
-The first physical implementation uses two 75-ohm hardline coaxial cables. `CX` identifies coaxial physical media; exact cable diameter, equalization, repeater spacing, connector and distance qualification remain PHY-validation items rather than universal protocol constants.
+The first physical implementation uses two 75-ohm hardline coaxial cables. `CX` identifies coaxial physical media; exact cable diameter, equalization, repeater spacing, connector, phit/framing format, and distance qualification remain PHY-validation items rather than universal protocol constants.
 
 ## Scaling
 
@@ -57,4 +57,6 @@ Two physically diverse GCT25-CX trunks may provide both aggregate capacity and p
 
 ## Link semantics
 
-Each direction has independent hop-local VC state. The baseline is the current 32-bit VC2 flit. Downstream capacity is credit controlled: one credit is guaranteed space for one physical flit. Exact carrier framing, clock recovery, keepalive, protection switching and integrity encoding remain profile work.
+Each direction has independent hop-local VC state. GCT carries ordinary 32-bit GNet data flits with link-local VC metadata; baseline VC2 associates a two-bit VCID with each flit without consuming flit data bits. The GCT PHY defines the mapping into physical phits/framing.
+
+Downstream capacity is credit controlled: one credit is guaranteed space for one complete 32-bit flit and its associated link metadata, independent of the number of phits used to carry it. Exact carrier framing, clock recovery, keepalive, protection switching and integrity encoding remain profile work.

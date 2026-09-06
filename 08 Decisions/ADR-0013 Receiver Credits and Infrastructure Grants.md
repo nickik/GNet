@@ -7,18 +7,18 @@ status: accepted
 layers: ["L2"]
 tags: ["gnet","gnet/decision","gnet/status/accepted","gnet/flow-control"]
 parent: "[[Decisions MOC]]"
-related: ["[[GNet Link Control Protocol]]","[[GNet Coupler]]","[[GNet Switch]]","[[Minimum GNet-3 NIC]]"]
-updated: 2026-09-03
+related: ["[[GNet Link Control Protocol]]","[[GNet Coupler]]","[[GNet Switch]]","[[Minimum GNet-3 NIC]]","[[ADR-0017 32-bit Data Flit and PHY Phits]]"]
+updated: 2026-09-06
 ---
 # Decision 0013: Receiver credits and infrastructure grants are distinct
 
-Status: **ACCEPTED 2026-09-03**
+Status: **ACCEPTED 2026-09-03; flit unit clarified by ADR-0017**
 
 ## Credit
 
-> **1 GNet credit = guaranteed downstream receive capacity for exactly one physical flit.**
+> **1 GNet credit = guaranteed downstream receive capacity for exactly one complete 32-bit data flit and its associated link metadata.**
 
-Credits are precise to one flit. Credit-return control messages may batch several returned credits.
+Credits are precise to one flit. They are independent of the width or number of physical phits used by the PHY. Credit-return control messages may batch several returned credits.
 
 ## Grant
 
@@ -32,7 +32,7 @@ GRANT <= min(
 )
 ```
 
-Credit is therefore neither airtime nor a scheduling quantum.
+Credit is therefore neither airtime, a phit count, nor a scheduling quantum.
 
 ## GC3 request/setup
 
@@ -50,4 +50,4 @@ The baseline maximum NORMAL GC3 scheduling quantum is eight flits. This is a sch
 
 ## Consequence
 
-The same invariant scales from a cheap shared GC3 to hop-by-hop wormhole/cut-through GS fabrics without redefining credit meaning.
+The same invariant scales from a cheap shared GC3 to hop-by-hop wormhole/cut-through GS fabrics and to PHYs with different phit widths without redefining credit meaning.

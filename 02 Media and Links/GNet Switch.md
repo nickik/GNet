@@ -8,7 +8,7 @@ layers: ["L1","L2"]
 tags: ["gnet","gnet/media","gnet/status/accepted","gnet/switch"]
 parent: "[[Media and Links MOC]]"
 related: ["[[GNet Link Control Protocol]]","[[GNet PHY Profiles]]","[[GNet Coupler]]","[[Minimum GNet-3 NIC]]"]
-updated: 2026-09-03
+updated: 2026-09-06
 ---
 # GNet Switch
 
@@ -28,11 +28,11 @@ GS10-16
 
 ## GS3
 
-Every GS3 attachment operates at up to 3 Mbit/s. A switch with eight ports can therefore sustain several independent 3 Mbit/s conversations at once when their destinations do not conflict.
+Every GS3 attachment operates at up to 3 Mbit/s of flit data. A switch with eight ports can therefore sustain several independent 3 Mbit/s conversations at once when their destinations do not conflict.
 
 ## GS10
 
-Every GS10 port begins through the Minimum GNet-3 compatibility mechanism. After GLCP capability exchange, each port independently upgrades a compatible endpoint to 10 Mbit/s.
+Every GS10 port begins through the Minimum GNet-3 compatibility mechanism. After GLCP capability exchange, each port independently upgrades a compatible endpoint to 10 Mbit/s of flit data.
 
 ```text
 Port 1   3 Mbit/s
@@ -56,9 +56,11 @@ The preferred switch model is:
 
 The same invariant applies at every hop:
 
-> **1 credit = guaranteed downstream capacity for one physical flit.**
+> **1 credit = guaranteed downstream capacity for one complete 32-bit flit and its associated link metadata.**
 
 An input may advance only when the next stage/output has credit and the switch scheduler grants the path. Credit exhaustion creates backpressure instead of packet loss.
+
+A switch implementation may store the 32-bit flit data in a natural 32-bit datapath/FIFO and keep VC state as a separate tag/context. The number and width of physical phits used on each external port is a PHY concern and does not change switch credit semantics.
 
 ## Routing boundary
 

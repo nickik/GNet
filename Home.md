@@ -6,7 +6,7 @@ type: home
 status: active
 tags: ["gnet","gnet/home","gnet/status/active"]
 related: ["[[GNet Architecture Overview]]","[[Specification Status]]","[[Open Questions]]"]
-updated: 2026-09-03
+updated: 2026-09-06
 ---
 # GNet knowledge base
 
@@ -39,11 +39,12 @@ updated: 2026-09-03
 
 - [[ADR-0001 Layer Boundaries]]
 - [[ADR-0002 Minimal GDP Header]]
-- [[ADR-0007 32-bit Flit Format]]
-- [[ADR-0011 Baseline VC2 Flit Without SOF]]
+- [[ADR-0006 GNET-L Rate]]
 - [[ADR-0012 Minimum GNet-3 Compatibility Profile]]
 - [[ADR-0013 Receiver Credits and Infrastructure Grants]]
 - [[ADR-0014 GC3 GS3 GS10 LAN Ladder]]
 - [[ADR-0015 Restore Minimal GDP Header]]
+- [[ADR-0016 Access and Carrier Profile Naming]]
+- [[ADR-0017 32-bit Data Flit and PHY Phits]]
 
 Historical/superseded decisions remain indexed rather than being erased.

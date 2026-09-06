@@ -17,12 +17,21 @@ template: true
 > **Up:** [[Packet Formats MOC]] · **Related:** [[32-bit Flit Format]] · [[Virtual Channels and VCIDs]]
 
 ```text
+    Flit data — exactly 32 bits
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | VCID  |                  Carried bits [27:0]                  |
+   |                         Data [31:0]                           |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+    Associated link metadata — baseline VC2, not part of flit data
+   +---+
+   |VC |
+   +---+
+    2 bits
 ```
+
+A PHY-specific packet/link note may additionally show phits, framing, or inline metadata encoding. Do not treat the baseline VCID as part of the 32-bit data row.
 
 ## Fields
 

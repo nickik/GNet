@@ -6,7 +6,7 @@ type: entrypoint
 status: active
 tags: ["gnet","gnet/meta","gnet/status/active"]
 related: ["[[GNet Home]]","[[GNet Architecture Overview]]","[[Specification Status]]"]
-updated: 2026-09-03
+updated: 2026-09-06
 ---
 # GNet
 
@@ -17,8 +17,10 @@ This repository is the **authoritative protocol and interoperability specificati
 ## Current baseline
 
 - every native NIC starts as [[Minimum GNet-3 NIC|Minimum GNet-3]];
-- baseline flit: **32 bits = 2-bit VCID + 30 carried bits**;
-- no SOF bit;
+- one GNet **flit carries exactly 32 data bits**;
+- baseline VC2 associates a **2-bit hop-local VCID** with every flit without consuming those 32 data bits;
+- a PHY may serialize one flit plus VC metadata as multiple physical transfer units (**phits**); an inline VC2 representation therefore carries 34 logical link bits per 32-bit flit;
+- there is no SOF bit;
 - four copper pairs: control up/down and data up/down;
 - receiver-driven flit credits; infrastructure grants are separate;
 - `GC3 -> GS3 -> GS10` is the normal LAN scaling ladder;

@@ -8,13 +8,13 @@ layers: ["L7"]
 tags: ["gnet","gnet/packet","gnet/status/draft","gnet/layer/l7"]
 parent: "[[Packet Formats MOC]]"
 related: ["[[GSC Protocol]]","[[GSC Message Registry]]","[[GDP Datagram]]"]
-updated: 2026-09-03
+updated: 2026-09-06
 ---
 # Session-control messages
 
 Status: **DRAFT logical envelope; message bodies OPEN**
 
-GSC is carried above GDP. Its fields form a continuous logical bitstream; GSC does not define physical flit alignment.
+GSC is carried above GDP. Its fields are defined as logical 32-bit words; current GDP payload carriage uses 32-bit DLP data flits.
 
 ```text
     Word 1
@@ -31,7 +31,7 @@ GSC is carried above GDP. Its fields form a continuous logical bitstream; GSC do
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
-These are logical words, not wire flits. The GDP/GSC bitstream is carried across the current baseline DLP flits (`2-bit VCID + 30 carried bits`) without requiring GSC-aligned flit boundaries.
+The current 20-octet GDP header occupies exactly five 32-bit flits, so a GSC payload begins on a flit boundary. Each complete 32-bit GSC word can therefore occupy one data flit directly when carried in this layout. Baseline VC metadata is associated separately by DLP/PHY and is not part of the GSC word.
 
 Transaction ID supports repeatable requests and response matching. Dialog ID correlates an establishing/established session and is zero where no dialog exists.
 

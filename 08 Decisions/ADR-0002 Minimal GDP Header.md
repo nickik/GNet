@@ -7,19 +7,20 @@ status: mixed
 layers: ["L3"]
 tags: ["gnet","gnet/decision","gnet/status/mixed","gnet/layer/l3"]
 parent: "[[Decisions MOC]]"
-related: ["[[GDP Protocol]]","[[GDP Datagram]]","[[ADR-0009 No GDP Integrity Field]]"]
-updated: 2026-09-02
+related: ["[[GDP Protocol]]","[[GDP Datagram]]","[[ADR-0009 No GDP Integrity Field]]","[[ADR-0017 32-bit Data Flit and PHY Phits]]"]
+updated: 2026-09-06
 ---
 # Decision 0002: Minimal GDP header
 
 > [!info] Knowledge graph
 > **Up:** [[Decisions MOC]] · **Related:** [[GDP Protocol]] · [[GDP Datagram]] · [[ADR-0009 No GDP Integrity Field]]
 
-
 Status: **FROZEN field set; DRAFT widths**
 
 GDP contains exactly Version, Type, Hop Limit, QoS, Source Address, and Destination Address. Payload length is known from DLP. Integrity, fragmentation, options, reliability, flow/session identification, and encryption are intentionally excluded.
 
-The working encoding assigns one octet to each control field and eight octets to each address, producing exactly 20 logical octets. Because every transmitted flit reserves four bits for VCID, DLP carries this 160-bit header across six 28-bit carried regions rather than five transmitted flits. This allocation can change before version 1 without changing the architectural decision.
+The current working encoding adds the GDP Size Class within the compact first word and produces exactly **20 logical octets / 160 bits**. Under [[ADR-0017 32-bit Data Flit and PHY Phits]], this occupies exactly **five 32-bit data flits**. Hop-local VC metadata is associated by the link layer and consumes none of those 160 GDP bits.
 
-GDP contains no checksum, CRC, hash, or other integrity field. [[ADR-0009 No GDP Integrity Field]] records the integrity-layer decision explicitly.
+The exact control-field widths remain subject to the current GDP encoding decision without changing the architectural requirement for a minimal header.
+
+GDP contains no checksum, CRC, hash, or other integrity field. The restored current integrity-layer decision is indexed by [[ADR-0015 Restore Minimal GDP Header]].

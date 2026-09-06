@@ -7,7 +7,7 @@ status: active
 tags: ["gnet","gnet/meta","gnet/status/active"]
 parent: "[[GNet Home]]"
 related: ["[[Specification Status]]","[[Contributing]]"]
-updated: 2026-09-03
+updated: 2026-09-06
 ---
 # Vault guide
 
@@ -31,6 +31,7 @@ Open the repository root as an Obsidian vault and begin at [[GNet Home]].
 2. Follow the nearest MOC.
 3. Treat current accepted ADRs as stronger than old prose.
 4. Use [[Open Questions]] for unresolved work.
-5. A baseline transmitted flit row is 32 bits with 2-bit VCID + 30 carried bits. There is no SOF bit.
-6. A 32-bit protocol-layout aid that is not a physical flit must be labelled `Word`.
-7. Historical/chat notes are evidence of design evolution, not current requirements.
+5. A GNet `Flit` row is exactly 32 data bits. Baseline VC2 is associated link metadata and is not drawn inside that 32-bit row.
+6. A `Phit` is a PHY-specific physical transfer unit; do not assume one phit equals one flit.
+7. A 32-bit protocol-layout aid that is not itself a DLP flit must be labelled `Word`.
+8. Historical/chat notes are evidence of design evolution, not current requirements.

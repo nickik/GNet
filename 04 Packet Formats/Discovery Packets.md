@@ -8,7 +8,7 @@ layers: ["L3"]
 tags: ["gnet","gnet/packet","gnet/status/draft","gnet/layer/l3"]
 parent: "[[Packet Formats MOC]]"
 related: ["[[GCTL Protocol]]","[[Discovery and Bootstrap]]","[[Service Type Registry]]"]
-updated: 2026-09-03
+updated: 2026-09-06
 ---
 # Service discovery packets
 
@@ -16,7 +16,7 @@ Status: **DRAFT — logical message semantics retained; old direct-DLP flit pack
 
 Discovery is generic: Router, Directory, Terminal Server, and later services use SOLICIT/ADVERTISE with different Service Type values.
 
-These are **GCTL messages carried through the current GDP/GCTL bootstrap profile**. Older diagrams that embedded four-bit VCIDs into each GCTL row are no longer normative because physical-flit packing is now `VC2 + 30 carried bits` and link bootstrap/control belongs to GLCP.
+These are **GCTL messages carried through the current GDP/GCTL bootstrap profile**. Older diagrams that embedded VCID bits inside each GCTL/flit row are no longer normative: current GNet uses 32-bit data flits with hop-local VC metadata associated separately, and link bootstrap/control belongs to GLCP.
 
 ## SOLICIT logical fields
 
