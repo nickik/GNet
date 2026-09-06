@@ -25,9 +25,11 @@ Transaction ID
 Router identity/address
 Delegated/offered prefix
 Prefix length
-Minimum local suffix width/policy
+Candidate client address within that prefix
 Lifetime
 ```
+
+For the accepted GNet 0.1 on-link prefix profile, Prefix Length is one of `/16`, `/32`, `/48`, or `/56`. The prefix MUST be normalized (all suffix bits zero), and the candidate address MUST match it. The remaining bits are router-managed endpoint space; there is no endpoint subnet delegation or separate local-suffix policy in 0.1.
 
 ## ADDRESS_CLAIM semantics
 
@@ -35,7 +37,7 @@ A client supplies at least:
 
 ```text
 Transaction ID
-Candidate address or delegated-suffix choice
+Candidate address supplied in ADDRESS_OFFER
 Client nonce/claim identifier
 ```
 
