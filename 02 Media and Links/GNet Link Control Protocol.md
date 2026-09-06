@@ -86,6 +86,25 @@ A granted/reserved credit cannot be granted again until the receiver returns it 
 
 The current engineering target is approximately **1 Mbit/s logical control signaling per direction** on the dedicated control pairs. A 32-bit logical control flit occupies about 32 microseconds before line-code overhead.
 
+## GNet 0.1 request and credit encoding
+
+The first credit-control profile freezes `REQUEST` and `CREDIT` as one 32-bit
+GLCP control flit each. `REQUEST` carries `size-class:4` and the canonical
+`traffic-class:8`; it does not create a separate link priority field.
+
+```text
+REQUEST: opcode:4 | version:4 | sender-generation:6 | request-id:6 |
+          size-class:4 | traffic-class:8
+CREDIT:  opcode:4 | version:4 | sender-generation:6 | request-id:6 |
+          credit-count:8 | reserved:4
+```
+
+Traffic classes are `0x00 NORMAL`, `0x01 REALTIME`, `0x02 CONTROL`, and
+`0x03 BULK`. Values `0x04–0xFF` are reserved in 0.1. One credit guarantees
+capacity for exactly one physical VC2 flit. A Switch may return a bounded
+credit response for an accepted request; credit is capacity, not permission to
+transmit.
+
 `HELLO` and `CAPABILITIES` have accepted GNet 0.1 opcode/layout definitions. Serialization, exact line code, and the encodings of the remaining operations are **DRAFT — requires PHY validation**. Manchester/biphase-style self-clocking encoding is a historically plausible candidate, not a frozen requirement.
 
 GNet-20 moves these semantics in-band after a negotiated mode transition; its reserved control-symbol/flit encoding remains open.
