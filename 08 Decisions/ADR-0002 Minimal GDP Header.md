@@ -18,7 +18,7 @@ updated: 2026-09-02
 
 Status: **FROZEN field set; DRAFT widths**
 
-GDP contains exactly Version, Type, Hop Limit, QoS, Source Address, and Destination Address. Payload length is known from DLP. Integrity, fragmentation, options, reliability, flow/session identification, and encryption are intentionally excluded.
+GDP contains exactly Version, Type, Hop Limit, QoS, Destination Address, and Source Address. Payload length is known from DLP. Integrity, fragmentation, options, reliability, flow/session identification, and encryption are intentionally excluded. The destination precedes the source in the current encoding candidate so forwarding can begin as soon as the destination is available.
 
 The working encoding assigns one octet to each control field and eight octets to each address, producing exactly 20 logical octets. Because every transmitted flit reserves four bits for VCID, DLP carries this 160-bit header across six 28-bit carried regions rather than five transmitted flits. This allocation can change before version 1 without changing the architectural decision.
 

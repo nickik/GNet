@@ -24,11 +24,13 @@ Type
 Size Class
 Hop Limit
 QoS
-64-bit Source
 64-bit Destination
+64-bit Source
 ```
 
 Reserved wire padding may exist but carries no protocol semantics.
+
+The current encoding candidate places Destination before Source, allowing a forwarding node to begin output selection before it has received the source address.
 
 GDP MUST NOT contain checksum/CRC/integrity, link credit state, Flow Control ID, receive window, session identity, fragmentation state, or options.
 

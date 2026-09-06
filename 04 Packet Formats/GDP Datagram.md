@@ -30,14 +30,14 @@ The current compact candidate keeps a 20-octet GDP header while preserving 64-bi
 
     Words 2-3
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                       Source Address                          |
+   |                    Destination Address                        |
    +                                                               +
    |                         64 bits                               |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
     Words 4-5
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                    Destination Address                        |
+   |                       Source Address                          |
    +                                                               +
    |                         64 bits                               |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -55,10 +55,12 @@ Fields are packed continuously across the baseline 32 carried bits of successive
 | Hop Limit | 8 | Decremented at every GDP router. |
 | QoS | 8 | Network forwarding/service marking subject to policy. |
 | Reserved | 4 | Wire-format reserve; transmit zero, ignore on receive. |
-| Source Address | 64 | Hierarchical source GDP address. |
 | Destination Address | 64 | Hierarchical destination GDP address. |
+| Source Address | 64 | Hierarchical source GDP address. |
 
 GDP contains **no header checksum, CRC, Flow Control ID, session ID, fragmentation state, or option chain**.
+
+Destination precedes source so a Switch or Router can select its output after the first three carried flits, before receiving the source address. The source remains available for policy, diagnostics, and return traffic after forwarding has begun.
 
 ## GDP package size classes
 
