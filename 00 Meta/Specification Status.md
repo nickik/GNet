@@ -34,6 +34,7 @@ This repository is the canonical working specification for GNet. It is coherent 
 - GDP uses the existing four-bit package-size registry from empty through 1 MiB jumbogram; link profiles may restrict usable classes.
 - Hop-local accidental-error detection belongs to DLP; end-to-end integrity belongs above GDP.
 - GNet uses hierarchical global addresses and does not depend on Ethernet MAC learning, collision domains, or NAT.
+- `FE80::/16` is the reserved non-routable link-local GDP prefix; clients generate their own 48-bit suffixes.
 
 ## ACCEPTED product/profile direction
 

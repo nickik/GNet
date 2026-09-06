@@ -28,6 +28,8 @@ The exact intermediate levels and bit partition remain open; `Top`, `Org`, and `
 
 Zero is reserved for an unconfigured/provisional source where a bootstrap profile explicitly permits it. GNet does not define an Ethernet-style global broadcast address.
 
+[[Link-Local Addressing]] defines the reserved `FE80::/16` non-routable fallback space. It is separate from globally delegated prefixes and uses a client-generated suffix rather than a factory identity.
+
 ## Local configuration
 
 1. GLCP establishes the physical/link relationship and capabilities.

@@ -30,7 +30,7 @@ REQUEST/CREDIT/GRANT and other link-control operations remain GLCP and never bec
 
 ## Network bootstrap
 
-After link establishment, an unconfigured endpoint uses a tightly scoped provisional/link-local GDP/GCTL bootstrap exchange to discover an authorized router and obtain/delegate network addressing information. Exact provisional GDP addressing is still DRAFT.
+After link establishment, an endpoint has the `FE80::/16` link-local fallback address defined by [[Link-Local Addressing]] and uses a tightly scoped GDP/GCTL bootstrap exchange to discover an authorized router and obtain/delegate routable network addressing information.
 
 Preferred sequence:
 
@@ -41,6 +41,8 @@ Preferred sequence:
 5. authentication/terminal registration when policy requires it.
 6. ordinary routed GDP/GCTL or directory queries for Directory, Terminal Server, Boot, Time, Identity, and other services.
 7. end-to-end session establishment with the selected service.
+
+If no `ADVERTISE(Router)` arrives during the bootstrap interval, the endpoint remains link-local-only. This is a local timeout transition and does not require a Coupler/Switch allocator or a new control message.
 
 GNet does not flood discovery into the routed network. Scope may not be silently expanded by intermediaries.
 
