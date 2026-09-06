@@ -75,3 +75,28 @@ Profile bits are `bit 0 = VC2` and `bit 1 = VC4`; bits `2–3` are reserved. VC2
 
 Rate bits are `bit 0 = 0.75 Mbit/s`, `bit 1 = 1.5 Mbit/s`, and `bit 2 = 3 Mbit/s`. Minimum GNet-3 endpoints offer all three rates. Infrastructure selection MUST be a one-bit subset of both the client offer and its local port capability; client confirmation MUST repeat that selection exactly.
 
+## RESET
+
+`RESET` discards the current hop-local control and DLP state for one physical port. It is diagnostic and recovery control, not authentication or a reliable transport operation.
+
+```text
+33      30 29      26 25          20 19      16 15       0
++----------+----------+--------------+----------+----------+
+| opcode=3 | version=1|     SGEN     |  reason  | reserved |
++----------+----------+--------------+----------+----------+
+     4 bits     4 bits       6 bits      4 bits    16 bits
+```
+
+| Field | Bits | Meaning |
+|---|---:|---|
+| `opcode` | 4 | `0x3` for `RESET`. |
+| `version` | 4 | `0x1` for GNet 0.1 GLCP. |
+| `sgen` | 6 | Sender generation currently established by `HELLO`. |
+| `reason` | 4 | Reset diagnostic reason. |
+| `reserved` | 16 | Transmit zero; ignore on receipt. |
+
+Reset reasons are: `0=unspecified/local restart`, `1=administrative reset`, `2=protocol violation`, `3=unsupported version or capability selection`, `4=timeout`, `5=integrity failure`, and `6=resource failure`. Values `7–15` are reserved.
+
+The receiver accepts a `RESET` only when `sgen` equals the established peer generation on that physical port; otherwise it discards the flit as stale. On transmission or acceptance, an endpoint MUST discard all VC allocation/activity, receiver-credit, grant/reservation, and capability-negotiation state for that port. Before sending its next `HELLO(initial)`, the resetting endpoint increments its local generation.
+
+The client always restarts negotiation after reset. A new `HELLO(initial)` is independently sufficient to replace old port state, so recovery does not depend on successful delivery of a RESET flit.

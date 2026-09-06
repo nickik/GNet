@@ -16,7 +16,7 @@ Priority meanings: **P0** blocks interoperable native-link prototypes; **P1** bl
 ## P0 — native-link interoperability
 
 1. **DLP integrity:** freeze CRC width/polynomial, initialization/reflection, trailer packing, final partial carried-region handling, and CRC-failure recovery.
-2. **GLCP wire encoding:** HELLO and CAPABILITIES are assigned for 0.1; assign REQUEST/RX_REQUEST/CREDIT/GRANT/RELEASE/ABORT/RESET and validate control serialization against the current ~1 Mbit/s target.
+2. **GLCP wire encoding:** HELLO, CAPABILITIES, and RESET are assigned for 0.1; assign REQUEST/RX_REQUEST/CREDIT/GRANT/RELEASE/ABORT and validate control serialization against the current ~1 Mbit/s target.
 3. **Copper electrical spec:** freeze differential levels, impedance/termination, isolation, line code, clock recovery, attenuation/crosstalk/noise masks, reach qualification, and failure detection.
 4. **GMC-8:** freeze pair-to-pin mapping, mechanical dimensions/keying, contact/shield rules, latch protection, and installation tooling.
 5. **GC3 conformance:** validate 8-flit NORMAL scheduling quantum, exact REALTIME anti-starvation rule, timeout/recovery, and the current class-0..7 / realtime-1..3 package policy.

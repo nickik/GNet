@@ -43,7 +43,7 @@ The baseline semantic operations are:
 | `GRANT` | infrastructure gives the sender permission to consume some reserved credits now and identifies the VC |
 | `END` / `RELEASE` | complete/release transfer and VC state |
 | `ABORT` | cancel an active allocation |
-| `RESET` | discard link-local control/VC state and restart baseline negotiation |
+| `RESET` | discard link-local control/VC state and restart baseline negotiation; its 0.1 encoding is defined in [[GLCP Control Flits]] |
 
 Minimum GC request semantics are:
 

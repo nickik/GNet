@@ -53,7 +53,7 @@ GNET-A remains a separate centrally scheduled residential-access family. GNET-P 
 ## DRAFT / validation items
 
 - Exact DLP CRC algorithm and trailer packing.
-- GLCP encodings for REQUEST/RX_REQUEST/CREDIT/GRANT/END/RELEASE/ABORT/RESET, control serialization, and electrical line code.
+- GLCP encodings for REQUEST/RX_REQUEST/CREDIT/GRANT/END/RELEASE/ABORT, control serialization, and electrical line code.
 - Exact electrical limits, attenuation/crosstalk masks, reach, termination, isolation, and connector pinout for each copper grade.
 - GC3-32 feasibility/economics and exact sustained-REALTIME anti-starvation rule.
 - GNet-20 bonded-lane/in-band-control encoding.
