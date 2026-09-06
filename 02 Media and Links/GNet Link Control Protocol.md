@@ -80,11 +80,11 @@ A granted/reserved credit cannot be granted again until the receiver returns it 
 
 ## GNet 0.1 bootstrap control flits
 
-[[GLCP Control Flits]] defines the accepted 34-bit logical control-flit layouts for `HELLO` and `CAPABILITIES`, including their generation checks and client-to-infrastructure negotiation sequence. The client begins a newly present link with `HELLO(initial)`; the infrastructure is the selecting authority for its physical port.
+[[GLCP Control Flits]] defines the accepted 32-bit logical control-flit layouts for `HELLO` and `CAPABILITIES`, including their generation checks and client-to-infrastructure negotiation sequence. The client begins a newly present link with `HELLO(initial)`; the infrastructure is the selecting authority for its physical port.
 
 ## Control timing and remaining encoding work
 
-The current engineering target is approximately **1 Mbit/s logical control signaling per direction** on the dedicated control pairs. A 34-bit logical control flit occupies about 34 microseconds before line-code overhead.
+The current engineering target is approximately **1 Mbit/s logical control signaling per direction** on the dedicated control pairs. A 32-bit logical control flit occupies about 32 microseconds before line-code overhead.
 
 `HELLO` and `CAPABILITIES` have accepted GNet 0.1 opcode/layout definitions. Serialization, exact line code, and the encodings of the remaining operations are **DRAFT — requires PHY validation**. Manchester/biphase-style self-clocking encoding is a historically plausible candidate, not a frozen requirement.
 

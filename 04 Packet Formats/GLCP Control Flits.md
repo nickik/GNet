@@ -14,20 +14,20 @@ updated: 2026-09-06
 
 Status: **ACCEPTED GNet 0.1 bootstrap and address-announcement encoding**
 
-GLCP uses its dedicated CONTROL-UP and CONTROL-DOWN pairs. A GLCP control flit is exactly 34 logical bits, sent most-significant bit first. It is not a DLP data flit: it has no VCID and does not consume DLP credit or grant state.
+GLCP uses its dedicated CONTROL-UP and CONTROL-DOWN pairs. A GLCP control flit is exactly **32 logical bits**, sent most-significant bit first. It is not a DLP data flit: it has no VCID and does not consume DLP credit or grant state. The 2-bit VCID exists only on the 34-bit DLP data flit, not on either control pair.
 
-The electrical line code and serialization remain PHY work. The 34-bit logical control-flit boundary is normative for GNet 0.1.
+The electrical line code and serialization remain PHY work. The 32-bit logical control-flit boundary is normative for GNet 0.1.
 
 ## HELLO
 
 `HELLO` establishes a current per-port link generation. The client MUST send `HELLO(initial)` as its first control flit after detecting link presence.
 
 ```text
-33      30 29      26 25  24 23          18 17          12 11       0
+31      28 27      24 23  22 21          16 15          10 9        0
 +----------+----------+------+------+--------------+--------------+----------+
 | opcode=1 | version=1| kind | SGEN |     PGEN     |   reserved   |
 +----------+----------+------+------+--------------+--------------+----------+
-     4 bits     4 bits  2 bits    6 bits       6 bits       12 bits
+     4 bits     4 bits  2 bits    6 bits       6 bits       10 bits
 ```
 
 | Field | Bits | Meaning |
@@ -37,7 +37,7 @@ The electrical line code and serialization remain PHY work. The 34-bit logical c
 | `kind` | 2 | `0=initial`, `1=acknowledgement`; `2–3` reserved. |
 | `sgen` | 6 | Sender's link generation, incremented when that endpoint begins a new negotiation. |
 | `pgen` | 6 | Peer's generation being acknowledged; zero only in `initial`. |
-| `reserved` | 12 | Transmit zero; ignore on receipt. |
+| `reserved` | 10 | Transmit zero; ignore on receipt. |
 
 The required exchange is:
 
@@ -54,11 +54,11 @@ On each later GLCP control flit, the receiver checks that the sender generation 
 After the HELLO exchange, the client sends one `CAPABILITIES(offer)` control flit. The infrastructure chooses one supported profile and rate, and the client confirms that exact selection. No data flit, `REQUEST`, `CREDIT`, or `GRANT` is valid before confirmation.
 
 ```text
-33      30 29      26 25          20 19  18 17      14 13    11 10       0
+31      28 27      24 23          18 17  16 15      12 11     9 8        0
 +----------+----------+--------------+------+------+----------+---------+----------+
 | opcode=2 | version=1|     SGEN     | kind | profile  | rate  | reserved |
 +----------+----------+--------------+------+------+----------+---------+----------+
-     4 bits     4 bits       6 bits   2 bits   4 bits   3 bits    11 bits
+     4 bits     4 bits       6 bits   2 bits   4 bits   3 bits     9 bits
 ```
 
 | Field | Bits | Meaning |
@@ -69,7 +69,7 @@ After the HELLO exchange, the client sends one `CAPABILITIES(offer)` control fli
 | `kind` | 2 | `0=offer`, `1=selection`, `2=confirmation`, `3=reject/reserved`. |
 | `profile` | 4 | Profile set in an offer; exactly one selected profile in selection/confirmation. |
 | `rate` | 3 | Rate set in an offer; exactly one selected rate in selection/confirmation. |
-| `reserved` | 11 | Transmit zero; ignore on receipt. |
+| `reserved` | 9 | Transmit zero; ignore on receipt. |
 
 Profile bits are `bit 0 = VC2` and `bit 1 = VC4`; bits `2–3` are reserved. VC2 is the sole 0.1 implementation profile. VC4 is a future profile and MUST NOT be offered by the current CGNet implementation.
 
@@ -80,11 +80,11 @@ Rate bits are `bit 0 = 0.75 Mbit/s`, `bit 1 = 1.5 Mbit/s`, and `bit 2 = 3 Mbit/s
 `RESET` discards the current hop-local control and DLP state for one physical port. It is diagnostic and recovery control, not authentication or a reliable transport operation.
 
 ```text
-33      30 29      26 25          20 19      16 15       0
+31      28 27      24 23          18 17      14 13       0
 +----------+----------+--------------+----------+----------+
 | opcode=3 | version=1|     SGEN     |  reason  | reserved |
 +----------+----------+--------------+----------+----------+
-     4 bits     4 bits       6 bits      4 bits    16 bits
+     4 bits     4 bits       6 bits      4 bits    14 bits
 ```
 
 | Field | Bits | Meaning |
@@ -93,7 +93,7 @@ Rate bits are `bit 0 = 0.75 Mbit/s`, `bit 1 = 1.5 Mbit/s`, and `bit 2 = 3 Mbit/s
 | `version` | 4 | `0x1` for GNet 0.1 GLCP. |
 | `sgen` | 6 | Sender generation currently established by `HELLO`. |
 | `reason` | 4 | Reset diagnostic reason. |
-| `reserved` | 16 | Transmit zero; ignore on receipt. |
+| `reserved` | 14 | Transmit zero; ignore on receipt. |
 
 Reset reasons are: `0=unspecified/local restart`, `1=administrative reset`, `2=protocol violation`, `3=unsupported version or capability selection`, `4=timeout`, `5=integrity failure`, and `6=resource failure`. Values `7–15` are reserved.
 
@@ -105,24 +105,24 @@ The client always restarts negotiation after reset. A new `HELLO(initial)` is in
 
 After capability confirmation, a client announces each usable full 64-bit GDP address to its directly attached infrastructure. This is client-originated, ephemeral attachment information, not a factory identity or an address-allocation request. A client announces its link-local address after link establishment and announces a router-confirmed routable address when it obtains one.
 
-`ADDRESS_ANNOUNCE` is three consecutive 34-bit control flits. Only one announcement may be outstanding on a port. Its first flit carries the sender generation; the two immediately following continuation flits belong to that announcement. A reset, intervening control operation, or stale first flit discards the partial announcement.
+`ADDRESS_ANNOUNCE` is three consecutive 32-bit control flits. Only one announcement may be outstanding on a port. Its first flit carries the sender generation; the two immediately following continuation flits belong to that announcement. A reset, intervening control operation, or stale first flit discards the partial announcement.
 
 | Part | Opcode | Address bits | Remaining bits |
 |---|---:|---|---|
-| 0 | `0x4` | `A[63:44]` (20) | `version:4`, `sgen:6` |
-| 1 | `0x5` | `A[43:14]` (30) | — |
-| 2 | `0x6` | `A[13:0]` (14) | reserved (16) |
+| 0 | `0x4` | `A[63:46]` (18) | `version:4`, `sgen:6` |
+| 1 | `0x5` | `A[45:18]` (28) | — |
+| 2 | `0x6` | `A[17:0]` (18) | reserved (10) |
 
-Part 0 is `opcode:4 | version:4 | sgen:6 | address-fragment:20`. Parts 1 and 2 are continuations and use `opcode:4 | address-fragment`; they do not repeat version or generation. Reserved bits transmit zero and are ignored on receipt.
+Part 0 is `opcode:4 | version:4 | sgen:6 | address-fragment:18`. Parts 1 and 2 are continuations and use `opcode:4 | address-fragment`; they do not repeat version or generation. Reserved bits transmit zero and are ignored on receipt.
 
 The infrastructure responds with one `ADDRESS_ANNOUNCE_ACK` flit:
 
 ```text
-33      30 29      26 25          20 19  18 17                 0
+31      28 27      24 23          18 17  16 15                 0
 +----------+----------+--------------+------+------+--------------------+
 | opcode=7 | version=1|     SGEN     | status |      reserved      |
 +----------+----------+--------------+------+------+--------------------+
-     4 bits     4 bits       6 bits    2 bits        18 bits
+     4 bits     4 bits       6 bits    2 bits        16 bits
 ```
 
 `status=0` means accepted; `1` means rejected; `2–3` are reserved. The ACK sender generation is the infrastructure generation established by HELLO. A client accepts it only for its one outstanding announcement and only when that generation equals its established peer generation.
