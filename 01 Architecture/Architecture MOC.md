@@ -19,7 +19,7 @@ updated: 2026-09-02
 - [[GNet Architecture Overview]] — narrative entry point.
 - [[GNet Layer Model]] — responsibilities and exclusions.
 - [[Addressing and Routing]] — global identity, aggregation, routing, and mobility.
-- [[Link-Local Addressing]] — routerless `FE80::/16` fallback and timeout behavior.
+- [[Link-Local Addressing]] — routerless `local::/16` fallback (wire prefix `FE80/16`) and timeout behavior.
 - [[Deployment Topology]] — household, neighbourhood, district, and metro structure.
 
 ## Control and service architecture

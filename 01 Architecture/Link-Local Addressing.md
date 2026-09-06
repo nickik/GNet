@@ -17,7 +17,7 @@ Every GNet client has a link-local GDP address before it receives any router adv
 
 ## Address format
 
-The reserved non-routable link-local prefix is `FE80::/16` in the 64-bit GDP address space. A client generates a fresh nonzero 48-bit suffix at bootstrap:
+The reserved non-routable link-local **wire prefix** is `FE80/16` in the 64-bit GDP address space. A client generates a fresh nonzero 48-bit suffix at bootstrap:
 
 ```text
 |             FE80             |       client-generated suffix       |
@@ -26,11 +26,17 @@ The reserved non-routable link-local prefix is `FE80::/16` in the 64-bit GDP add
 
 The prefix is a protocol constant, not a factory identity. The suffix is neither a MAC address nor a permanent client identity. A client MAY retain it across a local reset, but it MUST NOT assume it remains valid after a new bootstrap.
 
+## Canonical text form
+
+GDP addresses render in a compact IPv6-style notation: four 16-bit hexadecimal groups, lowercase hexadecimal, with the longest run of two or more zero groups compressed to `::`. The special wire prefix `FE80/16` always renders as the reserved word `local`; parsers accept it case-insensitively. Thus the first link-local value is `local::1`, and a client whose suffix is `0x0123456789AB` renders as `local:123:4567:89ab`.
+
+`local` is a presentation alias only. It does not alter the 64-bit value carried in GDP, which continues to start with `FE80`.
+
 ## Scope and router absence
 
 Link-local GDP addresses MUST NOT be routed, advertised outside their directly attached local domain, or used as a delegated/global prefix. They are valid only on the local GNet attachment domain.
 
-After GLCP reaches active state, a client waits for a GCTL `ADVERTISE(Router)` for the bootstrap interval. If one arrives, ordinary routed prefix delegation proceeds. If no router advertisement arrives before the interval expires, the client enters **link-local-only** state and continues using its generated `FE80::/16` address. Timeout is a local state transition; it sends no additional wire message.
+After GLCP reaches active state, a client waits for a GCTL `ADVERTISE(Router)` for the bootstrap interval. If one arrives, ordinary routed prefix delegation proceeds. If no router advertisement arrives before the interval expires, the client enters **link-local-only** state and continues using its generated `local::/16` address (wire prefix `FE80/16`). Timeout is a local state transition; it sends no additional wire message.
 
 Link-local-only addressing deliberately has no collision-detection protocol in GNet 0.1. Applications that need guaranteed unique local naming require a router-delegated address or a later scoped claim/probe extension.
 
