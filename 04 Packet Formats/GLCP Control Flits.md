@@ -109,11 +109,11 @@ After capability confirmation, a client announces each usable full 64-bit GDP ad
 
 | Part | Opcode | Address bits | Remaining bits |
 |---|---:|---|---|
-| 0 | `0x4` | `A[63:46]` (18) | `version:4`, `sgen:6` |
-| 1 | `0x5` | `A[45:18]` (28) | — |
-| 2 | `0x6` | `A[17:0]` (18) | reserved (10) |
+| 0 | `0x4` | — | `version:4`, `sgen:6`, reserved (18) |
+| 1 | continuation | `A[63:32]` (32) | — |
+| 2 | continuation | `A[31:0]` (32) | — |
 
-Part 0 is `opcode:4 | version:4 | sgen:6 | address-fragment:18`. Parts 1 and 2 are continuations and use `opcode:4 | address-fragment`; they do not repeat version or generation. Reserved bits transmit zero and are ignored on receipt.
+Part 0 is `opcode:4 | version:4 | sgen:6 | reserved:18`. It reserves the announcement format and carries the generation check. Parts 1 and 2 are the two raw 32-bit address words, most-significant word first; they carry no VCID, opcode, version, or generation. They are valid only immediately after a valid Part 0 while an announcement is outstanding. Reserved bits transmit zero and are ignored on receipt.
 
 The infrastructure responds with one `ADDRESS_ANNOUNCE_ACK` flit:
 
