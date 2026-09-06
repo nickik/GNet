@@ -14,6 +14,7 @@ updated: 2026-09-03
 Packet layouts use RFC-style 32-bit diagrams for logical words. A row labelled **Flit** is one actual transmitted flit and, for the baseline VC2 profile, shows a 2-bit VCID plus 32 carried bits. A row labelled **Word** is a logical protocol-layout aid.
 
 - [[34-bit Flit Format]] — normative baseline flit and advanced VC-width concept.
+- [[GLCP Control Flits]] — 34-bit link-bootstrap control flits for HELLO and CAPABILITIES.
 - [[Virtual Channels and VCIDs]] — VC scope/lifecycle and advanced VC4 negotiation.
 - [[GDP Datagram]] — minimal routed header and GDP Size Class registry.
 - [[Discovery Packets]] — logical GCTL service discovery messages.

@@ -7,12 +7,12 @@ status: mixed
 layers: ["L1","L2"]
 tags: ["gnet","gnet/protocol","gnet/status/mixed","gnet/layer/l1","gnet/layer/l2"]
 parent: "[[Media and Links MOC]]"
-related: ["[[GNet PHY Profiles]]","[[GNet Coupler]]","[[GNet Switch]]","[[Minimum GNet-3 NIC]]"]
-updated: 2026-09-03
+related: ["[[GNet PHY Profiles]]","[[GNet Coupler]]","[[GNet Switch]]","[[Minimum GNet-3 NIC]]","[[GLCP Control Flits]]"]
+updated: 2026-09-06
 ---
 # GNet Link Control Protocol (GLCP)
 
-Status: **ACCEPTED semantics; DRAFT compact encoding and electrical line code**
+Status: **GNet 0.1 HELLO/CAPABILITIES encoding accepted; remaining operations and electrical line code draft**
 
 GLCP is the hop-local control protocol used by native GNet links. On GNet-3 and GNet-10 copper it runs full-duplex on the dedicated CONTROL-UP and CONTROL-DOWN pairs while data uses DATA-UP and DATA-DOWN.
 
@@ -77,10 +77,14 @@ GRANT <= min(
 
 A granted/reserved credit cannot be granted again until the receiver returns it or link recovery cancels the reservation.
 
-## Control timing
+## GNet 0.1 bootstrap control flits
 
-The current engineering target is approximately **1 Mbit/s logical control signaling per direction** on the dedicated control pairs. A compact 16-bit control word would occupy about 16 microseconds before line-code overhead, which is short enough to pipeline control during an 8-flit GNet-10 scheduling quantum (25.6 microseconds).
+[[GLCP Control Flits]] defines the accepted 34-bit logical control-flit layouts for `HELLO` and `CAPABILITIES`, including their generation checks and client-to-infrastructure negotiation sequence. The client begins a newly present link with `HELLO(initial)`; the infrastructure is the selecting authority for its physical port.
 
-The 16-bit word layout, opcode numbers, serialization, and exact line code are **DRAFT — requires PHY validation**. Manchester/biphase-style self-clocking encoding is a historically plausible candidate, not a frozen requirement.
+## Control timing and remaining encoding work
+
+The current engineering target is approximately **1 Mbit/s logical control signaling per direction** on the dedicated control pairs. A 34-bit logical control flit occupies about 34 microseconds before line-code overhead.
+
+`HELLO` and `CAPABILITIES` have accepted GNet 0.1 opcode/layout definitions. Serialization, exact line code, and the encodings of the remaining operations are **DRAFT — requires PHY validation**. Manchester/biphase-style self-clocking encoding is a historically plausible candidate, not a frozen requirement.
 
 GNet-20 moves these semantics in-band after a negotiated mode transition; its reserved control-symbol/flit encoding remains open.

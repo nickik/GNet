@@ -23,6 +23,7 @@ This repository is the canonical working specification for GNet. It is coherent 
 - **Minimum GNet-3** is the universal native-NIC compatibility profile. Advanced NICs begin there and negotiate upward.
 - Native GNet-3/10 copper uses four balanced pairs: CONTROL-UP, CONTROL-DOWN, DATA-UP, DATA-DOWN.
 - GNet-3 nominal data rate is 3 Mbit/s with mandatory 1.5 and 0.75 Mbit/s fallback modes.
+- GLCP 0.1 `HELLO` and `CAPABILITIES` use accepted 34-bit logical control flits; their electrical serialization remains open.
 - **1 credit = guaranteed downstream receive capacity for exactly one physical flit.**
 - CREDIT and GRANT are distinct: receiver credit makes transmission safe; infrastructure grant schedules when reserved credit may be consumed.
 - Minimum GNet-3 priority has exactly `NORMAL` and `REALTIME`.
@@ -52,7 +53,7 @@ GNET-A remains a separate centrally scheduled residential-access family. GNET-P 
 ## DRAFT / validation items
 
 - Exact DLP CRC algorithm and trailer packing.
-- Exact GLCP opcode allocation, control-word encoding, serialization, and electrical line code.
+- GLCP encodings for REQUEST/RX_REQUEST/CREDIT/GRANT/END/RELEASE/ABORT/RESET, control serialization, and electrical line code.
 - Exact electrical limits, attenuation/crosstalk masks, reach, termination, isolation, and connector pinout for each copper grade.
 - GC3-32 feasibility/economics and exact sustained-REALTIME anti-starvation rule.
 - GNet-20 bonded-lane/in-band-control encoding.
