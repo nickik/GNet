@@ -105,23 +105,22 @@ The client always restarts negotiation after reset. A new `HELLO(initial)` is in
 
 After capability confirmation, a client announces each usable full 64-bit GDP address to its directly attached infrastructure. This is client-originated, ephemeral attachment information, not a factory identity or an address-allocation request. A client announces its link-local address after link establishment and announces a router-confirmed routable address when it obtains one.
 
-`ADDRESS_ANNOUNCE` is four consecutive 34-bit control flits. Only one announcement may be outstanding on a port. Each part repeats the sender generation, so a stale or interrupted announcement is discarded.
+`ADDRESS_ANNOUNCE` is three consecutive 34-bit control flits. Only one announcement may be outstanding on a port. Its first flit carries the sender generation; the two immediately following continuation flits belong to that announcement. A reset, intervening control operation, or stale first flit discards the partial announcement.
 
 | Part | Opcode | Address bits | Remaining bits |
 |---|---:|---|---|
-| 0 | `0x4` | `A[63:44]` (20) | — |
-| 1 | `0x5` | `A[43:24]` (20) | — |
-| 2 | `0x6` | `A[23:4]` (20) | — |
-| 3 | `0x7` | `A[3:0]` (4) | reserved (16) |
+| 0 | `0x4` | `A[63:44]` (20) | `version:4`, `sgen:6` |
+| 1 | `0x5` | `A[43:14]` (30) | — |
+| 2 | `0x6` | `A[13:0]` (14) | reserved (16) |
 
-Every part begins `opcode:4 | version:4 | sgen:6`. Reserved bits transmit zero and are ignored on receipt.
+Part 0 is `opcode:4 | version:4 | sgen:6 | address-fragment:20`. Parts 1 and 2 are continuations and use `opcode:4 | address-fragment`; they do not repeat version or generation. Reserved bits transmit zero and are ignored on receipt.
 
 The infrastructure responds with one `ADDRESS_ANNOUNCE_ACK` flit:
 
 ```text
 33      30 29      26 25          20 19  18 17                 0
 +----------+----------+--------------+------+------+--------------------+
-| opcode=8 | version=1|     SGEN     | status |      reserved      |
+| opcode=7 | version=1|     SGEN     | status |      reserved      |
 +----------+----------+--------------+------+------+--------------------+
      4 bits     4 bits       6 bits    2 bits        18 bits
 ```
