@@ -44,9 +44,9 @@ Advanced future links MAY negotiate a wider wire VCID after baseline link establ
 
 ```text
 VC2 = 2-bit VCID + 32 carried bits
-VC4 = 4-bit VCID + 32 carried bits
+VC4 = 4-bit VCID + 32 carried bits = 36 bits total
 ```
 
-GNet-3 and GNet-10 use VC2. The current GNet-20 concept also assumes VC2. VC4 is reserved for later advanced switched or cluster profiles and is not an independent minimum compatibility mode.
+GNet-3 and GNet-10 use VC2. The current GNet-20 concept also assumes VC2. VC4 is reserved for later advanced switched or cluster profiles, is not an independent minimum compatibility mode, and is out of scope for the current implementation.
 
 See [[ADR-0011 Baseline VC2 Flit Without SOF]].

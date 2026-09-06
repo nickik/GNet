@@ -38,7 +38,7 @@ A future negotiated VC4 profile MAY use:
 [ VCID:4 | Carried bits:32 ]
 ```
 
-but VC4 is not the baseline format and must never be assumed before successful capability negotiation.
+This is a 36-bit future profile. VC4 is not the baseline format, must never be assumed before successful capability negotiation, and is out of scope for the current implementation.
 
 ## Ordering
 

@@ -32,7 +32,7 @@ GNet-3 and GNet-10 use this VC2 profile. The current GNet-20 concept also assume
 A future advanced profile MAY negotiate:
 
 ```text
-VC4 = 4-bit VCID + 28 carried bits
+VC4 = 4-bit VCID + 32 carried bits = 36 bits total
 ```
 
 but no endpoint may assume VC4 before successful capability negotiation.
