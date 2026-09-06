@@ -32,7 +32,7 @@ This audit records material recovered from earlier Project GNET discussions and 
 - external SS7/E.164 handling at gateways and databases, not GDP routing;
 - home star, scheduled neighbourhood access, routed district trunks, dual-homed aggregation, and a redundant metro core;
 - strict separation of PLIO, QDX/QDX-GNET, and network protocol semantics.
-- a 32-bit transmitted flit containing a 4-bit hop-local VCID and 28 carried bits;
+- a superseded 32-bit transmitted flit containing a 4-bit hop-local VCID and 28 carried bits;
 - bounded per-VCID segments that permit interleaving and release the VCID after completion;
 - three DLP payload-size classes: 64, 256, and 1,024 octets;
 - no checksum, CRC, or other integrity field in GDP itself.

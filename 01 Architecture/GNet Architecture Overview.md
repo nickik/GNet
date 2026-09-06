@@ -7,7 +7,7 @@ status: frozen
 layers: ["L1","L2","L3","L4","L5","L6","L7"]
 tags: ["gnet","gnet/architecture","gnet/status/frozen"]
 parent: "[[Architecture MOC]]"
-related: ["[[GNet Layer Model]]","[[32-bit Flit Format]]","[[Virtual Channels and VCIDs]]","[[GNet PHY Profiles]]"]
+related: ["[[GNet Layer Model]]","[[34-bit Flit Format]]","[[Virtual Channels and VCIDs]]","[[GNet PHY Profiles]]"]
 updated: 2026-09-03
 ---
 # GNet architecture overview
@@ -23,10 +23,10 @@ Application/service
     -> GTS or application datagram
         -> GDP package
             -> DLP hop transfer
-                -> 32-bit physical flits
+                -> 34-bit physical flits
 ```
 
-The baseline physical flit is exactly 32 bits: a 2-bit hop-local VCID plus 30 carried bits. There is no SOF bit. The first data flit on an inactive allocated VC begins the DLP segment implicitly.
+The baseline physical flit is exactly 34 bits: a 2-bit hop-local VCID plus 32 carried bits. There is no SOF bit. The first data flit on an inactive allocated VC begins the DLP segment implicitly.
 
 ## Layer 1 — media and link control
 

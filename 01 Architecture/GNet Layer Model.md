@@ -17,7 +17,7 @@ Status: **FROZEN architecture; selected encodings remain DRAFT**
 | Layer | GNet component | Responsibilities | Explicit exclusions |
 |---|---|---|---|
 | L1 | GNet PHY / GLCP / GNET-A / GNET-P | signaling, clocks, pair/channel use, capability/rate negotiation, local transmission grants | global addressing, sessions, names |
-| L2 | DLP | VC2 baseline, 30 carried bits, bounded hop transfer, link integrity, receiver-credit accounting, protocol adaptation | global addresses, end-to-end sessions, directory lookup |
+| L2 | DLP | VC2 baseline, 32 carried bits, bounded hop transfer, link integrity, receiver-credit accounting, protocol adaptation | global addresses, end-to-end sessions, directory lookup |
 | L3 | GDP / GCTL | 64-bit source/destination, Size Class, hop limit, QoS, routing and network control | checksum/CRC, transport flow ID/window, reliability, fragmentation state |
 | L4 | GTS transport | ports, sequencing, acknowledgement, retransmission, receive flow control, fragmentation/reassembly | routing decisions, user identity |
 | L5 | GTS tunnel control / GNET-S | tunnel establishment, reset/rebind authority, stream profiles, reservations, cryptographic association | application naming |

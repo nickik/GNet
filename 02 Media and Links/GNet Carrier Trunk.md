@@ -57,4 +57,4 @@ Two physically diverse GCT25-CX trunks may provide both aggregate capacity and p
 
 ## Link semantics
 
-Each direction has independent hop-local VC state. The baseline is the current 32-bit VC2 flit. Downstream capacity is credit controlled: one credit is guaranteed space for one physical flit. Exact carrier framing, clock recovery, keepalive, protection switching and integrity encoding remain profile work.
+Each direction has independent hop-local VC state. The baseline is the current 34-bit VC2 flit. Downstream capacity is credit controlled: one credit is guaranteed space for one physical flit. Exact carrier framing, clock recovery, keepalive, protection switching and integrity encoding remain profile work.

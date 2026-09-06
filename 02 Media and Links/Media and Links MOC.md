@@ -32,9 +32,9 @@ updated: 2026-09-03
 
 ## Common data path
 
-- [[32-bit Flit Format]] — baseline VC2 + 30 carried bits.
+- [[34-bit Flit Format]] — baseline VC2 + 32 carried bits.
 - [[Virtual Channels and VCIDs]] — hop-local VC allocation and lifecycle.
 - [[Direct Link Protocol]] — minimal L2 data-path contract.
 - [[DLP Segment Size Classes]] — superseded historical DLP size-class model.
 
-Key decisions: [[ADR-0007 32-bit Flit Format]], [[ADR-0011 Baseline VC2 Flit Without SOF]], [[ADR-0012 Minimum GNet-3 Compatibility Profile]], [[ADR-0013 Receiver Credits and Infrastructure Grants]], [[ADR-0014 GC3 GS3 GS10 LAN Ladder]], and [[ADR-0016 Access and Carrier Profile Naming]].
+Key decisions: [[ADR-0017 34-bit Flit Format]], [[ADR-0011 Baseline VC2 Flit Without SOF]], [[ADR-0012 Minimum GNet-3 Compatibility Profile]], [[ADR-0013 Receiver Credits and Infrastructure Grants]], [[ADR-0014 GC3 GS3 GS10 LAN Ladder]], and [[ADR-0016 Access and Carrier Profile Naming]].

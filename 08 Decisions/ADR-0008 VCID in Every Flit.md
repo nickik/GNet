@@ -7,7 +7,7 @@ status: superseded
 layers: ["L2"]
 tags: ["gnet","gnet/decision","gnet/status/superseded","gnet/layer/l2"]
 parent: "[[Decisions MOC]]"
-related: ["[[Virtual Channels and VCIDs]]","[[32-bit Flit Format]]","[[ADR-0011 Baseline VC2 Flit Without SOF]]"]
+related: ["[[Virtual Channels and VCIDs]]","[[34-bit Flit Format]]","[[ADR-0011 Baseline VC2 Flit Without SOF]]"]
 updated: 2026-09-03
 ---
 # Decision 0008: VCID in every flit — historical evolution

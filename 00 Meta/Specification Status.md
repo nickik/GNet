@@ -16,10 +16,10 @@ This repository is the canonical working specification for GNet. It is coherent 
 ## FROZEN / ACCEPTED baseline
 
 - DLP is the minimal hop-local data layer; GDP is the minimal routed L3 package; transport/session functions are above GDP.
-- Every baseline native GNet flit is exactly 32 bits: **2-bit hop-local VCID + 30 carried bits**.
+- Every baseline native GNet flit is exactly 34 bits: **2-bit hop-local VCID + 32 carried bits**.
 - There is **no separate SOF bit**. The first data flit received on an inactive allocated VC begins a segment implicitly.
 - Baseline VCIDs provide four wire VCs and are replaced/terminated at forwarding nodes.
-- Future VC4 (`4 + 28`) may be negotiated only as an advanced profile; GNet-3 and GNet-10 use VC2.
+- Future VC4 (`4 + 32`, 36 bits total) may be negotiated only as an advanced profile; GNet-3 and GNet-10 use VC2.
 - **Minimum GNet-3** is the universal native-NIC compatibility profile. Advanced NICs begin there and negotiate upward.
 - Native GNet-3/10 copper uses four balanced pairs: CONTROL-UP, CONTROL-DOWN, DATA-UP, DATA-DOWN.
 - GNet-3 nominal data rate is 3 Mbit/s with mandatory 1.5 and 0.75 Mbit/s fallback modes.

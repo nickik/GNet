@@ -20,7 +20,7 @@ Minimum GNet-3 includes:
 
 - four-pair GMC-8 copper attachment;
 - 3 Mbit/s nominal data mode plus 1.5 and 0.75 Mbit/s fallback;
-- VC2 flits (`2 + 30`, no SOF);
+- VC2 flits (`2 + 32`, no SOF);
 - GLCP control;
 - per-flit receiver credits;
 - NORMAL and REALTIME priorities;

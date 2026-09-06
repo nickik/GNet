@@ -3,7 +3,7 @@
 > [!important] Historical design discussion
 > This archive records an exploratory GNet discussion. It is **not normative**. Where the discussion conflicts with accepted ADRs or [[Specification Status]], the accepted/current documentation wins.
 >
-> In particular, several intermediate statements in the conversation are superseded by the current architecture: GDP is a minimal routed datagram and carries **no checksum, Flow Control ID, receive window, session ID, or transport state**; DLP credits/VCIDs are hop-local and do **not** replace end-to-end GTS sequence/ACK/retransmission semantics. The current baseline native flit profile is **32 bits = 2-bit VCID + 30 carried bits**; VC4 (`4 + 28`) is a future negotiable profile.
+> In particular, several intermediate statements in the conversation are superseded by the current architecture: GDP is a minimal routed datagram and carries **no checksum, Flow Control ID, receive window, session ID, or transport state**; DLP credits/VCIDs are hop-local and do **not** replace end-to-end GTS sequence/ACK/retransmission semantics. The current baseline native flit profile is **34 bits = 2-bit VCID + 32 carried bits**; VC4 (`4 + 32`) is a future negotiable profile.
 
 ## Discussion summary
 

@@ -17,7 +17,7 @@ This repository is the **authoritative protocol and interoperability specificati
 ## Current baseline
 
 - every native NIC starts as [[Minimum GNet-3 NIC|Minimum GNet-3]];
-- baseline flit: **32 bits = 2-bit VCID + 30 carried bits**;
+- baseline flit: **34 bits = 2-bit VCID + 32 carried bits**;
 - no SOF bit;
 - four copper pairs: control up/down and data up/down;
 - receiver-driven flit credits; infrastructure grants are separate;

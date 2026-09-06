@@ -19,7 +19,7 @@ updated: 2026-09-03
 - [[ADR-0004 Direct Point-to-Point Link]]
 - [[ADR-0005 Tunnels and Streams]]
 - [[ADR-0006 GNET-L Rate]]
-- [[ADR-0007 32-bit Flit Format]]
+- [[ADR-0017 34-bit Flit Format]]
 - [[ADR-0011 Baseline VC2 Flit Without SOF]]
 - [[ADR-0012 Minimum GNet-3 Compatibility Profile]]
 - [[ADR-0013 Receiver Credits and Infrastructure Grants]]

@@ -16,7 +16,7 @@ updated: 2026-09-03
 - Minimum GNet-3 is universal.
 - Four copper pairs: control up/down and data up/down.
 - 3 Mbit/s nominal; 1.5 and 0.75 Mbit/s fallback.
-- 32-bit flit: `VCID:2 | carried:30`.
+- 34-bit flit: `VCID:2 | carried:32`.
 - No SOF bit.
 - GLCP handles local bootstrap, capability negotiation, credits, grants, VC allocation, abort/reset/status.
 - One credit is one physical flit of guaranteed downstream capacity.

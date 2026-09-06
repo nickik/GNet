@@ -32,9 +32,9 @@ GNet-3 is the universal native-copper compatibility baseline:
 ```text
 nominal data rate    3.0 Mbit/s
 fallback rates       1.5 and 0.75 Mbit/s
-physical flit        32 bits
+physical flit        34 bits
 baseline VCID        2 bits
-carried bits         30 bits
+carried bits         32 bits
 control              dedicated up/down pairs
 ```
 

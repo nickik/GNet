@@ -7,7 +7,7 @@ status: mixed
 layers: ["L2"]
 tags: ["gnet","gnet/protocol","gnet/status/mixed","gnet/layer/l2"]
 parent: "[[Media and Links MOC]]"
-related: ["[[32-bit Flit Format]]","[[GDP Datagram]]","[[Virtual Channels and VCIDs]]","[[GNet Link Control Protocol]]"]
+related: ["[[34-bit Flit Format]]","[[GDP Datagram]]","[[Virtual Channels and VCIDs]]","[[GNet Link Control Protocol]]"]
 updated: 2026-09-03
 ---
 # Direct Link Protocol (DLP)
@@ -21,7 +21,7 @@ DLP is the minimal Layer-2 data-path contract for one GNet hop. It deliberately 
 Every baseline data flit is:
 
 ```text
-[ VCID:2 | Carried bits:30 ]
+[ VCID:2 | Carried bits:32 ]
 ```
 
 There is no SOF field and no first-flit Frame Type field.

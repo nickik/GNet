@@ -31,7 +31,7 @@ GSC is carried above GDP. Its fields form a continuous logical bitstream; GSC do
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
-These are logical words, not wire flits. The GDP/GSC bitstream is carried across the current baseline DLP flits (`2-bit VCID + 30 carried bits`) without requiring GSC-aligned flit boundaries.
+These are logical words, not wire flits. The GDP/GSC bitstream is carried across the current baseline DLP flits (`2-bit VCID + 32 carried bits`) without requiring GSC-aligned flit boundaries in future negotiated profiles.
 
 Transaction ID supports repeatable requests and response matching. Dialog ID correlates an establishing/established session and is zero where no dialog exists.
 

@@ -31,6 +31,6 @@ Open the repository root as an Obsidian vault and begin at [[GNet Home]].
 2. Follow the nearest MOC.
 3. Treat current accepted ADRs as stronger than old prose.
 4. Use [[Open Questions]] for unresolved work.
-5. A baseline transmitted flit row is 32 bits with 2-bit VCID + 30 carried bits. There is no SOF bit.
+5. A baseline transmitted flit row is 34 bits with 2-bit VCID + 32 carried bits. There is no SOF bit.
 6. A 32-bit protocol-layout aid that is not a physical flit must be labelled `Word`.
 7. Historical/chat notes are evidence of design evolution, not current requirements.

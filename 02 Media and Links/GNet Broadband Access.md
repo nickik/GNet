@@ -47,7 +47,7 @@ A future faster GBA profile may be standardized when PHY technology justifies it
 
 ## GNet semantics
 
-GBA carries ordinary GNet/GDP traffic and MUST NOT introduce a second network-layer address architecture. Premise/channel identity, scheduling and ranging are access-local state. The current baseline 32-bit VC2 flit is used unless a future GBA profile explicitly standardizes another negotiated format.
+GBA carries ordinary GNet/GDP traffic and MUST NOT introduce a second network-layer address architecture. Premise/channel identity, scheduling and ranging are access-local state. The current baseline 34-bit VC2 flit is used unless a future GBA profile explicitly standardizes another negotiated format.
 
 ## Open PHY work
 

@@ -39,7 +39,7 @@ updated: 2026-09-03
 
 - [[ADR-0001 Layer Boundaries]]
 - [[ADR-0002 Minimal GDP Header]]
-- [[ADR-0007 32-bit Flit Format]]
+- [[ADR-0017 34-bit Flit Format]]
 - [[ADR-0011 Baseline VC2 Flit Without SOF]]
 - [[ADR-0012 Minimum GNet-3 Compatibility Profile]]
 - [[ADR-0013 Receiver Credits and Infrastructure Grants]]

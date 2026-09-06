@@ -13,10 +13,10 @@ updated: 2026-09-03
 
 | Term | Meaning |
 |---|---|
-| Flit | One complete baseline 32-bit physical transfer: 2-bit VCID and 30 carried bits. |
+| Flit | One complete baseline 34-bit physical transfer: 2-bit VCID and 32 carried bits. |
 | VCID | Hop-local Virtual Channel Identifier; two bits in the baseline VC2 profile. |
-| VC2 | Baseline `2-bit VCID + 30 carried bits` flit profile. |
-| VC4 | Future negotiated `4-bit VCID + 28 carried bits` advanced profile. |
+| VC2 | Baseline `2-bit VCID + 32 carried bits` flit profile. |
+| VC4 | Future negotiated `4-bit VCID + 32 carried bits` advanced profile. |
 | DLP | Direct Link Protocol, the minimal hop-local data-path contract. |
 | GLCP | GNet Link Control Protocol; hop-local bootstrap, capability, credit, grant, VC, reset, and status control. |
 | CREDIT | Guaranteed downstream receive capacity for one physical flit. |

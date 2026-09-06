@@ -7,7 +7,7 @@ status: draft
 layers: ["L3"]
 tags: ["gnet","gnet/packet","gnet/status/draft","gnet/layer/l3"]
 parent: "[[Packet Formats MOC]]"
-related: ["[[GDP Protocol]]","[[32-bit Flit Format]]","[[Direct Link Protocol]]","[[ADR-0015 Restore Minimal GDP Header]]"]
+related: ["[[GDP Protocol]]","[[34-bit Flit Format]]","[[Direct Link Protocol]]","[[ADR-0015 Restore Minimal GDP Header]]"]
 updated: 2026-09-03
 ---
 # GDP datagram packet
@@ -43,7 +43,7 @@ The current compact candidate keeps a 20-octet GDP header while preserving 64-bi
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
-Fields are packed continuously across the baseline 30 carried bits of successive flits. A 160-bit header therefore consumes six VC2 flits and leaves 20 carried bits in the sixth flit for the beginning of the GDP payload. The exact malformed-packet rules and Version/Type/QoS registries remain DRAFT.
+Fields are packed continuously across the baseline 32 carried bits of successive flits. A 160-bit header therefore consumes exactly five VC2 flits. The exact malformed-packet rules and Version/Type/QoS registries remain DRAFT.
 
 ## Fields
 

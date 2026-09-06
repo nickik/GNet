@@ -22,7 +22,7 @@ GNet interoperability is defined by the network/link specification. PLIO and QDX
 
 Every native adapter still implements [[Minimum GNet-3 NIC]] compatibility before negotiating advanced link modes.
 
-Hardware may maintain VC allocation, per-VC receive contexts, exact flit-credit counters, GLCP state, DLP integrity, queues, GDP header parsing, prefix lookup, switch output/path state, and DMA. Baseline wire parsing uses 30 carried bits per VC2 flit.
+Hardware may maintain VC allocation, per-VC receive contexts, exact flit-credit counters, GLCP state, DLP integrity, queues, GDP header parsing, prefix lookup, switch output/path state, and DMA. Baseline wire parsing uses 32 carried bits per VC2 flit.
 
 A switch/router implementation MAY use cut-through/wormhole flow with small buffers. Correctness must not require a hidden large whole-packet buffer when the GNet credit contract is satisfied.
 

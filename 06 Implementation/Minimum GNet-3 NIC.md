@@ -26,7 +26,7 @@ A Minimum GNet-3 NIC provides:
 - DATA-UP and DATA-DOWN;
 - 3.0 Mbit/s nominal data mode;
 - mandatory 1.5 and 0.75 Mbit/s fallback data modes;
-- 32-bit physical flits.
+- 34-bit physical flits.
 
 ## Flit and VC requirements
 
@@ -34,7 +34,7 @@ Baseline wire format:
 
 ```text
 2-bit VCID
-30 carried bits
+32 carried bits
 4 wire VCIDs
 no SOF bit
 ```
