@@ -131,11 +131,12 @@ A Coupler acknowledges receipt but does not retain an address-to-port forwarding
 
 ## ROUTER_PRESENT
 
-A router first completes ordinary HELLO and CAPABILITIES negotiation and announces
-its link-local address with `ADDRESS_ANNOUNCE`.  It then registers that already
-announced address as a router with its directly attached Switch.  This is
+A router first completes ordinary HELLO and CAPABILITIES negotiation and then
+registers its link-local address with its directly attached Switch.  This is
 hop-local GLCP registration, not a routed router advertisement and not address
-configuration.  A Coupler has no router table and does not use this message.
+configuration.  `ROUTER_PRESENT` atomically creates the address-to-port mapping
+and marks that address as a router; a separate `ADDRESS_ANNOUNCE` is not sent
+by a router.  A Coupler has no router table and does not use this message.
 
 `ROUTER_PRESENT` is three consecutive control flits:
 
@@ -147,9 +148,8 @@ configuration.  A Coupler has no router table and does not use this message.
 
 Part 0 is `opcode:4 | version:4 | sgen:6 | reserved:18`; parts 1 and 2 are
 the complete 64-bit link-local address, most-significant word first.  They are
-valid only immediately after a valid Part 0.  The Switch accepts the request
-only when the address is already mapped to this physical port by
-`ADDRESS_ANNOUNCE`.
+valid only immediately after a valid Part 0.  The Switch installs the
+address-to-ingress-port mapping as part of processing the complete registration.
 
 The Switch responds with one `ROUTER_PRESENT_ACK`:
 
