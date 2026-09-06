@@ -12,7 +12,7 @@ updated: 2026-09-06
 ---
 # GLCP control flits
 
-Status: **ACCEPTED GNet 0.1 bootstrap encoding**
+Status: **ACCEPTED GNet 0.1 bootstrap and address-announcement encoding**
 
 GLCP uses its dedicated CONTROL-UP and CONTROL-DOWN pairs. A GLCP control flit is exactly 34 logical bits, sent most-significant bit first. It is not a DLP data flit: it has no VCID and does not consume DLP credit or grant state.
 
@@ -100,3 +100,32 @@ Reset reasons are: `0=unspecified/local restart`, `1=administrative reset`, `2=p
 The receiver accepts a `RESET` only when `sgen` equals the established peer generation on that physical port; otherwise it discards the flit as stale. On transmission or acceptance, an endpoint MUST discard all VC allocation/activity, receiver-credit, grant/reservation, and capability-negotiation state for that port. Before sending its next `HELLO(initial)`, the resetting endpoint increments its local generation.
 
 The client always restarts negotiation after reset. A new `HELLO(initial)` is independently sufficient to replace old port state, so recovery does not depend on successful delivery of a RESET flit.
+
+## ADDRESS_ANNOUNCE
+
+After capability confirmation, a client announces each usable full 64-bit GDP address to its directly attached infrastructure. This is client-originated, ephemeral attachment information, not a factory identity or an address-allocation request. A client announces its link-local address after link establishment and announces a router-confirmed routable address when it obtains one.
+
+`ADDRESS_ANNOUNCE` is four consecutive 34-bit control flits. Only one announcement may be outstanding on a port. Each part repeats the sender generation, so a stale or interrupted announcement is discarded.
+
+| Part | Opcode | Address bits | Remaining bits |
+|---|---:|---|---|
+| 0 | `0x4` | `A[63:44]` (20) | — |
+| 1 | `0x5` | `A[43:24]` (20) | — |
+| 2 | `0x6` | `A[23:4]` (20) | — |
+| 3 | `0x7` | `A[3:0]` (4) | reserved (16) |
+
+Every part begins `opcode:4 | version:4 | sgen:6`. Reserved bits transmit zero and are ignored on receipt.
+
+The infrastructure responds with one `ADDRESS_ANNOUNCE_ACK` flit:
+
+```text
+33      30 29      26 25          20 19  18 17                 0
++----------+----------+--------------+------+------+--------------------+
+| opcode=8 | version=1|     SGEN     | status |      reserved      |
++----------+----------+--------------+------+------+--------------------+
+     4 bits     4 bits       6 bits    2 bits        18 bits
+```
+
+`status=0` means accepted; `1` means rejected; `2–3` are reserved. The ACK sender generation is the infrastructure generation established by HELLO. A client accepts it only for its one outstanding announcement and only when that generation equals its established peer generation.
+
+A Coupler acknowledges receipt but does not retain an address-to-port forwarding table: its data medium is shared and recipients filter by GDP destination. A Switch acknowledges after installing the address-to-ingress-port attachment mapping; it discards mappings learned from a port on link-down or RESET.

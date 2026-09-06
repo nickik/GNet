@@ -41,6 +41,7 @@ The baseline semantic operations are:
 | `RX_REQUEST` | infrastructure asks the destination to reserve receive capacity for the proposed transfer |
 | `CREDIT` | receiver advertises guaranteed free capacity in physical flits |
 | `GRANT` | infrastructure gives the sender permission to consume some reserved credits now and identifies the VC |
+| `ADDRESS_ANNOUNCE` / `ADDRESS_ANNOUNCE_ACK` | client announces a usable GDP address; infrastructure confirms receipt/attachment handling |
 | `END` / `RELEASE` | complete/release transfer and VC state |
 | `ABORT` | cancel an active allocation |
 | `RESET` | discard link-local control/VC state and restart baseline negotiation; its 0.1 encoding is defined in [[GLCP Control Flits]] |

@@ -45,6 +45,8 @@ A slow endpoint never reduces unrelated ports.
 
 ## Forwarding architecture
 
+After a client announces a usable GDP address, a plain GS records that address against the ingress port and acknowledges the announcement. This ephemeral attachment map selects the egress port for local delivery; entries learned from a port are discarded on link-down or RESET. A GS does not allocate client addresses.
+
 The preferred switch model is:
 
 - cut-through/wormhole forwarding;

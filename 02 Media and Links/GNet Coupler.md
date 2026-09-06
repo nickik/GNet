@@ -34,14 +34,13 @@ It maintains only small active-flow state such as:
 ```text
 VCID
 source port
-destination port
 priority
 reserved/available receiver credits
 sender remaining demand
 scheduler state
 ```
 
-A sender uses GLCP `REQUEST(destination,size_class,priority)`. The GC sends `RX_REQUEST` to the destination. The receiver reports real free capacity with `CREDIT`. The GC then schedules consumption of those credits with `GRANT`.
+A Coupler's data path is shared: all attached endpoints observe a granted transfer and filter it by the GDP destination address. A Coupler therefore does not retain a GDP-address-to-port forwarding table. It acknowledges `ADDRESS_ANNOUNCE` for uniform client behavior but otherwise ignores it. The receiver reports real free capacity with `CREDIT`; the GC then schedules consumption of those credits with `GRANT`.
 
 The receiver decides what is safe; the GC decides what transmits now.
 
