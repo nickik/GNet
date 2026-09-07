@@ -41,7 +41,7 @@ The baseline semantic operations are:
 | `CREDIT` | receiver advertises guaranteed free capacity in physical flits |
 | `GRANT` | infrastructure gives the sender permission to consume some reserved credits now and identifies the VC |
 | `ADDRESS_ANNOUNCE` / `ADDRESS_ANNOUNCE_ACK` | client announces a usable GDP address; infrastructure confirms receipt/attachment handling |
-| `END` / `RELEASE` | complete/release transfer and VC state |
+| `END` | complete/release transfer and VC state |
 | `ABORT` | cancel an active allocation |
 | `RESET` | discard link-local control/VC state and restart baseline negotiation; its 0.1 encoding is defined in [[GLCP Control Flits]] |
 
@@ -49,13 +49,12 @@ Minimum GC request semantics are:
 
 ```text
 REQUEST {
-    destination     local link/port identity
-    size_class      GDP package Size Class
-    priority        NORMAL or REALTIME
+    destination     local attachment / next-hop GDP destination
+    traffic_class   NORMAL, REALTIME, CONTROL, or BULK
 }
 ```
 
-`destination` is the next local attachment, not the final routed GDP destination. For a routed packet leaving the segment, the local destination can therefore be the router while the GDP Destination remains the final endpoint.
+`destination` is used by the first Switch/Coupler hop. Once a Switch has selected the destination port, it does not need to forward the original destination field to that client; the downstream request is local to that next hop.
 
 ## CREDIT versus GRANT
 
@@ -102,6 +101,10 @@ CREDIT:  opcode:4 | version:4 | sender-generation:6 | request-id:6 |
           credit-count:8 | reserved:4
 GRANT:   opcode:4 | version:4 | sender-generation:6 | request-id:6 |
           vcid:2 | reserved:10
+END:     opcode:4 | version:4 | sender-generation:6 | request-id:6 |
+          reserved:12
+ABORT:   opcode:4 | version:4 | sender-generation:6 | request-id:6 |
+          reason:4 | reserved:8
 ```
 
 Traffic classes are `0x00 NORMAL`, `0x01 REALTIME`, `0x02 CONTROL`, and
@@ -114,6 +117,6 @@ transmit beyond its current credit balance. `END` completes the package after
 all required grants and data have been sent; a `GRANT` is not an implicit end
 marker.
 
-`HELLO` and `CAPABILITIES` have accepted GNet 0.1 opcode/layout definitions. Serialization, exact line code, and the encodings of the remaining operations are **DRAFT — requires PHY validation**. Manchester/biphase-style self-clocking encoding is a historically plausible candidate, not a frozen requirement.
+`HELLO`, `CAPABILITIES`, `REQUEST`, `CREDIT`, `GRANT`, `END`, and `ABORT` have accepted GNet 0.1 opcode/layout definitions. `ABORT` reasons are `0x0 SENDER_ABORT`, `0x1 TIMEOUT`, `0x2 PROTOCOL_ERROR`, and `0x3 RESOURCE_ERROR`; `0x4–0xF` are reserved. Serialization, exact line code, and the encodings of the remaining operations are **DRAFT — requires PHY validation**. Manchester/biphase-style self-clocking encoding is a historically plausible candidate, not a frozen requirement.
 
 GNet-20 moves these semantics in-band after a negotiated mode transition; its reserved control-symbol/flit encoding remains open.
