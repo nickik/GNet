@@ -7,7 +7,7 @@ status: active
 tags: ["gnet", "gnet/moc", "gnet/architecture", "gnet/status/active"]
 parent: "[[GNet Home]]"
 related: ["[[Protocols MOC]]", "[[Media and Links MOC]]", "[[Decisions MOC]]"]
-updated: 2026-09-02
+updated: 2026-09-07
 ---
 # Architecture map of content
 
@@ -19,6 +19,7 @@ updated: 2026-09-02
 - [[GNet Architecture Overview]] — narrative entry point.
 - [[GNet Layer Model]] — responsibilities and exclusions.
 - [[Addressing and Routing]] — global identity, aggregation, routing, and mobility.
+- [[Wormhole Routing Benefits]] — benefits, congestion behavior, historical research, and comparison with ATM and Ethernet/IP packet switching.
 - [[Link-Local Addressing]] — routerless `local::/16` fallback (wire prefix `FE80/16`) and timeout behavior.
 - [[Deployment Topology]] — household, neighbourhood, district, and metro structure.
 
