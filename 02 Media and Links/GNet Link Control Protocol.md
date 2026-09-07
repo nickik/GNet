@@ -101,13 +101,18 @@ REQUEST header: opcode:4 | version:4 | sender-generation:6 | request-id:6 |
 REQUEST destination: address[63:32] | address[31:0]
 CREDIT:  opcode:4 | version:4 | sender-generation:6 | request-id:6 |
           credit-count:8 | reserved:4
+GRANT:   opcode:4 | version:4 | sender-generation:6 | request-id:6 |
+          vcid:2 | grant-count:8 | reserved:2
 ```
 
 Traffic classes are `0x00 NORMAL`, `0x01 REALTIME`, `0x02 CONTROL`, and
 `0x03 BULK`. Values `0x04–0xFF` are reserved in 0.1. One credit guarantees
 capacity for exactly one physical VC2 flit. A Switch may return a bounded
 credit response for an accepted request; credit is capacity, not permission to
-transmit.
+transmit. `GRANT` authorizes exactly `grant-count` physical flits on `vcid`.
+The sender must not transmit beyond that count. `END` completes the package
+after all required grants and data have been sent; a `GRANT` is not an implicit
+end marker.
 
 `HELLO` and `CAPABILITIES` have accepted GNet 0.1 opcode/layout definitions. Serialization, exact line code, and the encodings of the remaining operations are **DRAFT — requires PHY validation**. Manchester/biphase-style self-clocking encoding is a historically plausible candidate, not a frozen requirement.
 
