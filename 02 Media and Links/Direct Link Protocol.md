@@ -38,7 +38,7 @@ Adaptation profiles that carry a non-GDP protocol directly over DLP MUST define 
 
 ## Link control separation
 
-On GNet-3 and GNet-10 copper, [[GNet Link Control Protocol|GLCP]] runs on the dedicated CONTROL-UP and CONTROL-DOWN pairs. GLCP performs bootstrap, capability negotiation, VC allocation, REQUEST/RX_REQUEST, CREDIT, GRANT, release, abort, reset, and link status. These operations are not GDP packets and do not consume data flits.
+On GNet-3 and GNet-10 copper, [[GNet Link Control Protocol|GLCP]] runs on the dedicated CONTROL-UP and CONTROL-DOWN pairs. GLCP performs bootstrap, capability negotiation, VC allocation, REQUEST, CREDIT, GRANT, release, abort, reset, and link status. These operations are not GDP packets and do not consume data flits.
 
 ## Flow control
 

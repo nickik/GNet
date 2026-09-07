@@ -44,7 +44,7 @@ GDP Size Class
 priority
 ```
 
-The GC forwards an RX_REQUEST to the local destination. The receiver advertises actual capacity. The GC reserves that capacity and chooses the actual grant.
+The GC forwards the REQUEST to the local destination. The receiver advertises actual capacity. The GC reserves that capacity and chooses the actual grant. GNet 0.1 has no separate RX_REQUEST message.
 
 The baseline maximum NORMAL GC3 scheduling quantum is eight flits. This is a scheduler value only. REALTIME may be serviced at the next grant boundary without revoking already granted flits.
 

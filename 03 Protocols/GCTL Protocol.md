@@ -16,7 +16,7 @@ Status: **DRAFT network-control protocol**
 
 GCTL carries network-level discovery, address configuration, routing/OAM, and diagnostic messages. It is distinct from [[GNet Link Control Protocol|GLCP]].
 
-- **GLCP** is hop-local link control: HELLO, capability/rate negotiation, REQUEST, RX_REQUEST, CREDIT, GRANT, VC allocation/release, ABORT, RESET, and link status.
+- **GLCP** is hop-local link control: HELLO, capability/rate negotiation, REQUEST, CREDIT, GRANT, VC allocation/release, ABORT, RESET, and link status.
 - **GCTL** is network control associated with GDP configuration and routing/service behavior.
 
 The earlier design that used a DLP first-flit Frame Type and direct-DLP GCTL before addressing is superseded. Native GNet bootstrap begins with GLCP. Network discovery/configuration then uses GDP/GCTL with the provisional/link-local addressing rules defined by the bootstrap profile.
