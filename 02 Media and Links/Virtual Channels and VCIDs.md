@@ -25,6 +25,11 @@ The baseline Virtual Channel Identifier (VCID) is the **two-bit field at the sta
 
 There is **no SOF bit**. Once a VC has been allocated for a transfer, the first data flit received while that VC is inactive implicitly begins the DLP segment. Completion, ABORT, timeout, or link reset releases its active state.
 
+VCID `0` is reserved for circular-network/deadlock-resolution algorithms. Normal
+data transfers MUST use VCIDs `1–3` in the VC2 profile. The reservation does not
+assign a resolution algorithm; it prevents ordinary traffic from consuming the
+escape channel needed by a future resolution procedure.
+
 ## Meaning
 
 A VCID is:
