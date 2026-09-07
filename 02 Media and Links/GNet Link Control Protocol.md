@@ -88,14 +88,17 @@ The current engineering target is approximately **1 Mbit/s logical control signa
 
 ## GNet 0.1 request and credit encoding
 
-The first credit-control profile freezes `REQUEST` and `CREDIT` as one 32-bit
-GLCP control flit each. `REQUEST` carries the canonical `traffic-class:8`;
-package size is learned from the GDP header once transmission begins and is
-not duplicated in the request.
+The first credit-control profile freezes the `REQUEST` header and `CREDIT` as
+32-bit GLCP control flits. A complete `REQUEST` is three consecutive flits:
+the header followed by the two 32-bit words of its GDP destination address.
+`REQUEST` carries the canonical `traffic-class:8`; package size is learned
+from the GDP header once transmission begins and is not duplicated in the
+request.
 
 ```text
-REQUEST: opcode:4 | version:4 | sender-generation:6 | request-id:6 |
-          traffic-class:8 | reserved:4
+REQUEST header: opcode:4 | version:4 | sender-generation:6 | request-id:6 |
+                traffic-class:8 | reserved:4
+REQUEST destination: address[63:32] | address[31:0]
 CREDIT:  opcode:4 | version:4 | sender-generation:6 | request-id:6 |
           credit-count:8 | reserved:4
 ```
