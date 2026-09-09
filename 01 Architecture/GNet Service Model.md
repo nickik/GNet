@@ -27,7 +27,7 @@ GNet distinguishes four different identifiers:
 | Stream ID | within one tunnel | multiplex independently negotiated data streams |
 | Service selector | setup and directory | identify the requested logical service |
 
-A service name identifies a logical resource, not necessarily a machine. One name may resolve to several providers. The directory may select or rank providers by reachability, availability, load, location, authorization, or policy. Human-readable names are resolved above GTS to binary service selectors; GTS itself does not carry arbitrary service-name strings as its fundamental service identifier.
+A service name identifies a logical resource, not necessarily a machine. One name may resolve to several providers. The directory may select or rank providers by reachability, availability, load, location, authorization, or policy. GTS itself supports compact binary or fixed-width textual Service Selectors; higher-level directories may map longer human-readable names to them.
 
 ## Directory service record
 
@@ -50,31 +50,38 @@ The exact binary record, naming grammar, replication, and selection algorithm re
 
 GTS does not use fixed 16-bit TCP-style source and destination ports. Service selection is a setup operation, separate from tunnel and stream identity.
 
-A service selector consists logically of:
+A Service Selector begins with a 2-bit Size Class. The class determines the representation that follows:
 
-- a 4-bit Service Size Class;
-- a Service ID whose width is selected by that class.
+| Size class | Selector field | Representation | Intended use |
+|---:|---:|---|---|
+| 0 | 8 bits | numeric service code | common registered services and very small systems |
+| 1 | 32 bits | 4 ASCII characters | compact named services |
+| 2 | 128 bits | 16 ASCII characters | sparse, private, or opaque named services |
+| 3 | reserved | — | future expansion |
 
-| Size class | Service ID width | Intended character |
-|---:|---:|---|
-| 0 | 8 bits | very small/common registered services |
-| 1 | 16 bits | larger registered or application namespaces |
-| 2 | 32 bits | large application/organizational namespaces |
-| 3 | 64 bits | sparse or private selectors |
-| 4 | 128 bits | very sparse/opaque private selectors |
-| 5-15 | reserved | future expansion |
+ASCII names occupy fixed-width byte fields. Names shorter than the field are terminated and padded with zero bytes. The exact allowed character set and case rules remain OPEN.
 
-The size class is part of the selector representation; the exact placement of its four bits in a CONNECT or STREAM_OPEN packet remains part of the open GTS wire-format work.
+The common class-0 case therefore requires only 10 logical selector bits: a 2-bit class plus an 8-bit Service ID. A small implementation may support only class 0, while larger systems can support named service selectors without changing the GTS service-selection model.
 
-The common class-0 case therefore has only 12 logical selector bits: four bits of size class plus eight bits of Service ID. Implementations may support only the smaller classes when appropriate, while larger systems can use wider selectors without changing the service-selection model.
+Examples:
+
+```text
+00 + 05                        -> registered service 5, e.g. FILE
+01 + "FILE"                    -> four-character named service
+10 + "oooooofilesy\0\0\0\0" -> private 128-bit selector field
+```
+
+The textual forms are still exact selector values, not names that GTS must further resolve.
 
 ### Enumeration properties
 
-Small selectors are deliberately enumerable and are suitable for public/common services. Large selectors may be allocated sparsely so that exhaustive service scanning is impractical. A 64-bit or 128-bit selector only gains this property when valid values are sparse or difficult to guess; merely placing sequentially assigned services in a wide field does not prevent enumeration.
+The 8-bit namespace is deliberately enumerable and is suitable for public/common services. The 32-bit and especially 128-bit textual namespaces can be allocated sparsely so that exhaustive scanning is impractical.
 
-This is not cryptographic protection. A passive observer that sees a service selector during setup can learn and later reuse that value. Encryption, authentication, and stronger capability semantics are outside the current service-selector mechanism.
+The width does not by itself make a selector secret. Predictable names can be guessed with a dictionary regardless of the size of the field. A private selector intended to resist scanning should therefore be sufficiently unpredictable within its namespace.
 
-Service enumeration is not required by GTS. A higher-level discovery or directory service may publish selected services, while other selectors can be distributed by configuration, naming systems, or other mechanisms.
+This is not cryptographic protection. A passive observer that sees a Service Selector during setup can learn and later reuse that value. Encryption and authentication are outside the current baseline.
+
+Service enumeration is not required by GTS. A higher-level discovery or directory service may publish selected services, while private selectors can be distributed by configuration or other mechanisms.
 
 ## Setup-only use
 
