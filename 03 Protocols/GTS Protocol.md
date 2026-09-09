@@ -30,20 +30,22 @@ GTS does not require TCP-style 16-bit source and destination ports. Transport id
 - Stream ID identifies one flow within a tunnel;
 - Service Selector identifies the logical service requested during setup.
 
-The Service Selector is variable-width. It consists logically of a 4-bit Service Size Class followed by a Service ID:
+The Service Selector begins with a 2-bit Size Class:
 
-| Size class | Service ID width |
-|---:|---:|
-| 0 | 8 bits |
-| 1 | 16 bits |
-| 2 | 32 bits |
-| 3 | 64 bits |
-| 4 | 128 bits |
-| 5-15 | reserved |
+| Size class | Selector field | Representation |
+|---:|---:|---|
+| 0 | 8 bits | numeric registered service code |
+| 1 | 32 bits | 4 ASCII characters |
+| 2 | 128 bits | 16 ASCII characters |
+| 3 | reserved | future expansion |
+
+ASCII selector fields are fixed width. Shorter names are terminated and padded with zero bytes. The exact allowed character set and case-folding rules remain OPEN.
 
 The selector is carried only when selecting/opening a service, in CONNECT and/or STREAM_OPEN depending on the final state machine. Ordinary DATA packets do not repeat it.
 
-Class 0 provides a compact public/common service namespace. Wider classes allow much larger namespaces and may be allocated sparsely. Sparse 64-bit or 128-bit selectors can make exhaustive remote service scanning impractical without introducing cryptography. This property depends on allocation: sequential or otherwise predictable values remain guessable regardless of field width.
+Class 0 gives very small systems a compact public service namespace at only 10 logical bits: two class bits plus one service byte. The textual classes permit directly named services without imposing a global 16-bit port registry. The 128-bit class also provides a very large sparse namespace that can be used for private or opaque service names.
+
+Sparse selectors can make exhaustive remote service scanning impractical without introducing cryptography. This property depends on the selector value being difficult to guess. Predictable textual names remain vulnerable to dictionary probing even when carried in a 128-bit field.
 
 The selector mechanism itself provides no secrecy or authentication. A passive observer can learn a selector that appears in setup traffic. Cryptographic protection is outside the current baseline.
 
