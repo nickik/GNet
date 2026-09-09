@@ -36,7 +36,14 @@ GTS first establishes a tunnel. A separate Reset ID is the capability required t
 
 Service identity is separate from transport identity. GTS does not require TCP-style source/destination ports. A setup-only Service Selector identifies the logical service during CONNECT or STREAM_OPEN; Tunnel IDs identify established associations and Stream IDs identify flows within them. Ordinary DATA packets do not repeat the Service Selector.
 
-The accepted Service Selector model uses a 4-bit size class followed by an 8-, 16-, 32-, 64-, or 128-bit Service ID. Small selectors are appropriate for common public services; larger sparsely allocated selectors can make exhaustive scanning impractical. This mechanism is not cryptographic and does not hide a selector from a passive observer.
+The accepted Service Selector model uses a 2-bit size class:
+
+- class 0: 8-bit numeric registered service code;
+- class 1: 32-bit fixed-width ASCII service name;
+- class 2: 128-bit fixed-width ASCII service name;
+- class 3: reserved.
+
+The class-0 form requires only 10 logical bits and is intended for common services and very small systems. The 128-bit textual form permits sparse private or opaque service names, making exhaustive scanning impractical when names are sufficiently unpredictable. This is not cryptographic protection: predictable names remain guessable and passive observers can learn selectors from setup traffic.
 
 The current working proposal uses a 64-bit Tunnel ID, 64-bit Reset ID, 16-bit Stream IDs, stream 0 for control, and stream 1 as default data. Only the tunnel-first model, reset-authority behavior, and variable-width service-selector semantics are accepted; these identifier widths and reserved stream numbers remain DRAFT.
 
