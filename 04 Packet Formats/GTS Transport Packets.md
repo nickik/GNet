@@ -27,30 +27,43 @@ Normal DATA MUST NOT contain Reset ID or Service Selector. Link `CREDIT`/`GRANT`
 
 ## Service Selector field
 
-When a CONNECT or STREAM_OPEN selects a logical service, it carries the following logical fields:
+When a CONNECT or STREAM_OPEN selects a logical service, it carries a 2-bit Size Class followed by a class-specific selector field:
+
+| Size class | Selector field | Representation |
+|---:|---:|---|
+| `00` | 8 bits | numeric registered service code |
+| `01` | 32 bits | 4 ASCII characters |
+| `10` | 128 bits | 16 ASCII characters |
+| `11` | reserved | future expansion |
+
+Logical layout:
 
 ```text
-+----------------+----------------------------------+
-| Size Class 4b  | Service ID 8/16/32/64/128 bits |
-+----------------+----------------------------------+
++--------------+------------------------------------+
+| Size Class 2 | Selector: 8, 32, or 128 bits      |
++--------------+------------------------------------+
 ```
 
-The Service ID width is determined by Size Class:
+ASCII selector fields are fixed-width byte strings. A shorter name is terminated with a zero byte and the remaining bytes are zero padded. The exact permitted ASCII subset and case rules remain OPEN.
 
-| Size class | Service ID width |
-|---:|---:|
-| 0 | 8 bits |
-| 1 | 16 bits |
-| 2 | 32 bits |
-| 3 | 64 bits |
-| 4 | 128 bits |
-| 5-15 | reserved |
+Examples:
 
-The exact octet/bit placement is not yet frozen. The four-bit Size Class SHOULD be packed with another four-bit setup field where practical so that the class-0 case requires only 12 logical selector bits rather than forcing a standalone service-width byte.
+```text
+00 05
+    -> registered service 5
+
+01 "FILE"
+    -> four-character service name
+
+10 "oooooofilesy\0\0\0\0"
+    -> 16-byte selector field containing a private name
+```
+
+The exact placement of the two Size Class bits in CONNECT or STREAM_OPEN is not yet frozen. They SHOULD share an existing setup byte with unrelated small flags where practical. The class-0 form therefore has only 10 logical selector bits.
 
 The selector is setup-only. Once a service has been accepted and bound to tunnel/stream state, subsequent DATA packets use the Tunnel ID and Stream ID rather than repeating the Service Selector.
 
-Large selector widths permit sparse allocation. This can make exhaustive service scanning impractical, but it is not cryptographic protection: predictable values remain guessable and a passive observer can learn selectors from unencrypted setup traffic.
+The 128-bit textual form allows a very sparse service namespace. Exhaustive scanning can therefore be impractical, but this is not cryptographic protection. Predictable names can still be dictionary-scanned, and a passive observer can learn selectors from unencrypted setup traffic.
 
 Earlier CONNECT/CONNECT_ACK diagrams were exploratory and assumed obsolete 4-bit-VCID/28-carried-bit DLP packing. They are not current wire encodings and are intentionally not reproduced as normative diagrams here.
 
