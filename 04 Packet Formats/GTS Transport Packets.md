@@ -12,54 +12,62 @@ updated: 2026-09-10
 ---
 # GTS transport packets
 
-Status: **OPEN exact wire packing; service-selector and integrity semantics accepted**
+Status: **OPEN exact DATA/ACK/control packing; identifier and integrity widths accepted**
 
-The tunnel/stream model requires encodings for:
+The initial traditional packet-routed GTS profile uses:
 
-- `CONNECT` — propose Tunnel ID/reset authority/service/profile and initial transport flow control;
-- `CONNECT_ACK` — accept and return negotiated state/handle;
-- `STREAM_OPEN` / `STREAM_ACCEPT` — establish stream IDs, optionally select a service, and negotiate delivery profiles;
-- `DATA` / `ACK` — carry stream data plus only profile-required sequence/ack/window state;
-- `STREAM_CLOSE` — close one stream;
-- `TUNNEL_CLOSE`, `RESET`, `REBIND` — destructive operations that prove reset authority.
+- 32-bit receiver-local Tunnel IDs;
+- 8-bit Stream IDs scoped to one tunnel;
+- reliable ordered streams;
+- packet-by-packet GDP routing;
+- mandatory end-to-end CRC.
 
-Normal DATA MUST NOT contain Reset ID or Service Selector. Link `CREDIT`/`GRANT` are not GTS fields; they are GLCP/DLP hop-local state.
+Flow-ID routing, multicast/group transport, unreliable streams, and transport congestion control are outside this initial profile.
 
 ## Mandatory integrity trailer
 
-Every GTS packet carries an end-to-end CRC trailer. CRC width is determined solely by the enclosing GDP Size Class:
+Every GTS packet carries an end-to-end CRC trailer. CRC width is determined by the enclosing GDP Size Class and is not negotiated or explicitly encoded.
 
 | GDP Size Class | GTS CRC |
 |---|---:|
-| dedicated 0-byte tiny class | CRC-8 |
-| dedicated 3-byte tiny class | CRC-8 |
+| dedicated 0-byte tiny class | CRC-8 only for a future compact GTS form |
+| dedicated 3-byte tiny class | CRC-8 only for a future compact GTS form |
 | every larger class | CRC-32 |
 
-There is no CRC-type flag or negotiation field. Given the GDP Size Class, an implementation knows the required GTS trailer width.
+The ordinary 32-bit-Tunnel/8-bit-Stream GTS header cannot fit in the 0-byte or 3-byte GDP classes. Traditional GTS therefore uses larger GDP classes and CRC-32.
 
-Logical packet layout:
+CRC parameters are frozen as:
 
 ```text
-+-----------------------------------------------+
-| GTS header                                    |
-+-----------------------------------------------+
-| GTS payload                                   |
-+-----------------------------------------------+
-| CRC-8 for 0/3-byte tiny class, else CRC-32    |
-+-----------------------------------------------+
+CRC-8-GNET
+  width       8
+  polynomial  0x07
+  init        0x00
+  refin       false
+  refout      false
+  xorout      0x00
+  check       "123456789" -> 0xF4
+
+CRC-32-GNET
+  width       32
+  polynomial  0x04C11DB7
+  init        0xFFFFFFFF
+  refin       false
+  refout      false
+  xorout      0xFFFFFFFF
+  byte order  most-significant byte first
+  check       "123456789" -> 0xFC891918
 ```
 
-The CRC protects the GTS header and payload as one unit. The CRC calculation also begins with a GDP pseudo-header so corruption or misdelivery of relevant GDP endpoint/interpretation fields cannot silently validate at GTS.
-
-Logical checksum input:
+The CRC input is the canonical GDP pseudo-header followed by the complete GTS header and payload. The CRC trailer itself is not included in the calculation.
 
 ```text
 +-----------------------------------------------+
-| GDP pseudo-header                             |
-|  effective source endpoint                    |
-|  effective destination endpoint               |
-|  GDP Type                                     |
+| canonical GDP pseudo-header                   |
+|  effective source address                     |
+|  effective destination address                |
 |  GDP Size Class                               |
+|  GDP protocol context / Type if retained      |
 +-----------------------------------------------+
 | complete GTS header                           |
 +-----------------------------------------------+
@@ -68,54 +76,29 @@ Logical checksum input:
              -> CRC-8 or CRC-32
 ```
 
-The pseudo-header is not transmitted again inside GTS.
+For the traditional routed profile, effective source and destination are canonical 64-bit GDP endpoint identities. A compact/local GDP representation must expand its abbreviated addresses to those same effective endpoint identities before CRC calculation. Thus local/global wire representation may change at a router without changing GTS end-to-end integrity.
 
-The rule is identical in local and global operation. A global GDP packet contributes its relevant global endpoint fields. A compact/local GDP encoding contributes the corresponding effective local source/destination or endpoint fields, including fields that may be represented compactly or derived from the local context. Local mode MUST NOT weaken GTS integrity by omitting the GDP endpoint binding.
+Hop Limit, local/global representation bits, reserved bits, and other mutable forwarding/representation fields are excluded from the pseudo-header. If GDP retains its current next-protocol `Type` field, that Type is included; if it is removed, a fixed GTS protocol-domain constant replaces it.
 
-Mutable forwarding fields such as Hop Limit are excluded because they legitimately change at routers. The exact pseudo-header definition must be frozen for every GDP local/global encoding together with the final CRC polynomials and golden vectors.
-
-A failed CRC causes the packet to be discarded. Reliable GTS treats it exactly as a missing packet; it MUST NOT acknowledge corrupted DATA as successfully received.
+A failed CRC causes the packet to be discarded and treated as not received. Corrupted DATA MUST NOT be positively acknowledged.
 
 ## Service Selector field
 
-When a CONNECT or STREAM_OPEN selects a logical service, it carries a 2-bit Size Class followed by a class-specific selector field:
+When setup selects a logical service, it carries a 2-bit selector class followed by a class-specific selector field:
 
-| Size class | Selector field | Representation |
+| Class | Selector field | Current intent |
 |---:|---:|---|
 | `00` | 8 bits | numeric registered service code |
-| `01` | 32 bits | 4 ASCII characters |
-| `10` | 128 bits | 16 ASCII characters |
+| `01` | short fixed field | compact textual service selector; exact alphabet/packing open |
+| `10` | 128 bits | long/private textual selector |
 | `11` | reserved | future expansion |
 
-Logical layout:
+The selector is setup-only. Once a service has been accepted and bound to tunnel/stream state, DATA packets use only Tunnel ID and Stream ID.
 
-```text
-+--------------+------------------------------------+
-| Size Class 2 | Selector: 8, 32, or 128 bits      |
-+--------------+------------------------------------+
-```
+## Packet layouts still to freeze
 
-ASCII selector fields are fixed-width byte strings. A shorter name is terminated with a zero byte and the remaining bytes are zero padded. The exact permitted ASCII subset and case rules remain OPEN.
+The exact numeric packet-type registry and detailed packet layouts remain under review. At minimum the initial profile needs CONNECT, CONNECT_ACK, STREAM_OPEN, STREAM_ACK/ACCEPT, DATA, ACK, STREAM_CLOSE, tunnel close, and RESET semantics.
 
-Examples:
+Unknown/undefined GTS packet types in the final registry are discarded. No implementation may reinterpret an undefined type as DATA or another known packet form.
 
-```text
-00 05
-    -> registered service 5
-
-01 "FILE"
-    -> four-character service name
-
-10 "oooooofilesy\0\0\0\0"
-    -> 16-byte selector field containing a private name
-```
-
-The exact placement of the two Size Class bits in CONNECT or STREAM_OPEN is not yet frozen. They SHOULD share an existing setup byte with unrelated small flags where practical. The class-0 form therefore has only 10 logical selector bits.
-
-The selector is setup-only. Once a service has been accepted and bound to tunnel/stream state, subsequent DATA packets use the Tunnel ID and Stream ID rather than repeating the Service Selector.
-
-The 128-bit textual form allows a very sparse service namespace. Exhaustive scanning can therefore be impractical, but this is not cryptographic protection. Predictable names can still be dictionary-scanned, and a passive observer can learn selectors from unencrypted setup traffic.
-
-Earlier CONNECT/CONNECT_ACK diagrams were exploratory and assumed obsolete 4-bit-VCID/28-carried-bit DLP packing. They are not current wire encodings and are intentionally not reproduced as normative diagrams here.
-
-The next transport decision must define CONNECT, CONNECT_ACK, STREAM_OPEN, STREAM_ACCEPT, DATA, ACK, RESET, and CLOSE together with exact state machines, retransmission/congestion behavior, exact CRC algorithms, and golden vectors. Physical carriage then uses the current baseline VC2 DLP format without transport-specific flit alignment.
+The next wire-format decision is the exact DATA and ACK layout, including sequence-number width, ACK bitmap/credit representation, and whether any DATA flags are required.
