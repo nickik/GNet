@@ -8,11 +8,11 @@ layers: ["L3"]
 tags: ["gnet","gnet/packet","gnet/status/draft","gnet/layer/l3"]
 parent: "[[Packet Formats MOC]]"
 related: ["[[GDP Protocol]]","[[34-bit Flit Format]]","[[Direct Link Protocol]]","[[ADR-0015 Restore Minimal GDP Header]]"]
-updated: 2026-09-03
+updated: 2026-09-10
 ---
 # GDP datagram packet
 
-Status: **FROZEN semantic field set; DRAFT exact encoding**
+Status: **FROZEN semantic field set; DRAFT exact encoding and size-class registry**
 
 GDP is the Layer-3 routed datagram protocol. It contains no session, reliability, flow-control, or integrity state. Link credits belong to GLCP/DLP and transport state belongs above GDP.
 
@@ -64,7 +64,7 @@ Destination precedes source so a Switch or Router can select its output after th
 
 ## GDP package size classes
 
-This is the current four-bit GDP package-size registry. It replaces the superseded DLP Segment Class scheme.
+GDP retains a 4-bit explicit size-class field. For the current candidate, the sixteen values are deliberately concentrated below 2 KiB, where normal interactive, control, voice, and bulk traffic benefits most from finer granularity. Only two larger jumbo classes are retained for now.
 
 | ID | Name | Payload bytes |
 |---:|---|---:|
@@ -73,17 +73,21 @@ This is the current four-bit GDP package-size registry. It replaces the supersed
 | 2 | `ctrl32B` | 32 |
 | 3 | `ctrl64B` | 64 |
 | 4 | `msg128B` | 128 |
-| 5 | `msg256B` | 256 |
-| 6 | `medium512B` | 512 |
-| 7 | `bulk1K` | 1024 |
-| 8 | `legacyet` | 1500 |
-| 9 | `xmtu2K` | 2048 |
-| 10 | `jumbo8K` | 8192 |
-| 11 | `ultra16K` | 16384 |
-| 12 | `mega32K` | 32768 |
-| 13 | `giga64K` | 65536 |
-| 14 | `jumbogram256K` | 262144 |
-| 15 | `jumbogram1M` | 1048576 |
+| 5 | `msg192B` | 192 |
+| 6 | `msg256B` | 256 |
+| 7 | `msg384B` | 384 |
+| 8 | `medium512B` | 512 |
+| 9 | `medium768B` | 768 |
+| 10 | `bulk1K` | 1024 |
+| 11 | `bulk1280B` | 1280 |
+| 12 | `legacyet` | 1500 |
+| 13 | `xmtu2K` | 2048 |
+| 14 | `jumbo4K` | 4096 |
+| 15 | `jumbo8K` | 8192 |
+
+The table is intentionally explicit rather than generated from a mathematical sequence. It is a provisional engineering registry and may be revised later without changing the four-bit Size Class field itself.
+
+The 3-byte class is retained as a deliberate optimization for very small traffic such as packet voice and compact local exchanges. The 1500-byte class is retained for convenient interoperation with common external network packet sizes. Above 2 KiB, the registry becomes intentionally coarse.
 
 A physical/link profile MAY restrict which GDP classes it accepts. In particular GC3 deliberately excludes large/jumbo classes; see [[GNet Coupler]].
 
