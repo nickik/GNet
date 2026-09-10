@@ -8,53 +8,62 @@ layers: ["L4","L5"]
 tags: ["gnet","gnet/architecture","gnet/status/mixed","gnet/layer/l4","gnet/layer/l5"]
 parent: "[[Architecture MOC]]"
 related: ["[[GTS Protocol]]","[[GTS Transport Packets]]","[[Virtual Channels and VCIDs]]","[[ADR-0005 Tunnels and Streams]]"]
-updated: 2026-09-09
+updated: 2026-09-10
 ---
 # Transport, sessions, and reserved flows
 
 > [!info] Knowledge graph
 > **Up:** [[Architecture MOC]] · **Related:** [[GTS Protocol]] · [[GTS Transport Packets]] · [[Virtual Channels and VCIDs]] · [[ADR-0005 Tunnels and Streams]]
 
+Status: **FROZEN initial traditional packet-routed transport identity; OPEN exact packet layouts**
 
-Status: **FROZEN placement; OPEN exact wire protocol**
-
-GDP provides best-effort routed datagrams and no integrity field. Endpoints add the following functions as needed:
-
-- setup-only service selection using variable-width Service Selectors;
-- session/tunnel identity and local handles;
-- stream multiplexing within a tunnel;
-- sequence and acknowledgment numbers;
-- receive windows and flow control;
-- retransmission and ordered delivery;
-- fragmentation and reassembly when payloads exceed a link path limit;
-- end-to-end integrity and optional encryption;
-- reserved-flow setup and release.
+GDP provides best-effort routed datagrams and no end-to-end integrity field. The initial GTS profile above it provides reliable ordered streams and mandatory end-to-end CRC protection.
 
 ## Tunnel and stream model
 
-GTS first establishes a tunnel. A separate Reset ID is the capability required to close, reset, or rebind it; normal data does not repeat that capability. Multiple streams share the tunnel and negotiate reliability, ordering/sequencing, byte-versus-message delivery, encryption, and compression independently.
+GTS first establishes a tunnel. The initial profile freezes:
 
-Service identity is separate from transport identity. GTS does not require TCP-style source/destination ports. A setup-only Service Selector identifies the logical service during CONNECT or STREAM_OPEN; Tunnel IDs identify established associations and Stream IDs identify flows within them. Ordinary DATA packets do not repeat the Service Selector.
+- 32-bit receiver-local Tunnel IDs;
+- 8-bit Stream IDs scoped within one tunnel;
+- service selection only during setup, not in ordinary DATA;
+- traditional packet-by-packet GDP routing with no flow-ID routing dependency.
+
+Each endpoint allocates the Tunnel ID that the peer uses when sending to it. Ordinary GTS packets therefore carry the receiver's local Tunnel ID, not a globally unique connection identifier and not a source/destination pair of Tunnel IDs.
+
+Stream IDs multiplex reliable ordered data streams within a tunnel. Reserved Stream IDs and simultaneous-open allocation rules remain to be frozen with the exact STREAM_OPEN state machine.
+
+Service identity is separate from transport identity. GTS does not require TCP-style source/destination ports. A setup-only Service Selector identifies the logical service during CONNECT or STREAM_OPEN; ordinary DATA packets use Tunnel ID and Stream ID.
 
 The accepted Service Selector model uses a 2-bit size class:
 
 - class 0: 8-bit numeric registered service code;
-- class 1: 32-bit fixed-width ASCII service name;
-- class 2: 128-bit fixed-width ASCII service name;
+- class 1: short fixed-width textual selector;
+- class 2: 128-bit fixed-width textual/private selector;
 - class 3: reserved.
 
-The class-0 form requires only 10 logical bits and is intended for common services and very small systems. The 128-bit textual form permits sparse private or opaque service names, making exhaustive scanning impractical when names are sufficiently unpredictable. This is not cryptographic protection: predictable names remain guessable and passive observers can learn selectors from setup traffic.
+The exact compact character encoding for textual selectors remains open.
 
-The current working proposal uses a 64-bit Tunnel ID, 64-bit Reset ID, 16-bit Stream IDs, stream 0 for control, and stream 1 as default data. Only the tunnel-first model, reset-authority behavior, and variable-width service-selector semantics are accepted; these identifier widths and reserved stream numbers remain DRAFT.
+## Reliability baseline
 
-The architecture should support at least three service modes: unreliable datagram, reliable ordered stream/message, and reserved real-time flow. They may share a common session-control header, but routers must not need transport state for ordinary forwarding.
+The initial profile is reliable and ordered. Unreliable stream modes are deferred. Packet sequence/ACK representation, receive credit, retransmission timing, and the exact DATA/ACK layouts remain open.
 
-## Real-time flows
+The current direction is packet-oriented sequencing rather than TCP-style byte sequence numbers. A fixed ACK bitmap/selective-repeat scheme is under consideration but is not yet frozen.
 
-Voice, interactive media, and other bounded-delay traffic remain GDP packets. Endpoints request resources through GNet Session Control. Routers perform admission control and schedule the admitted traffic using GDP QoS plus local reservation state. Legacy telephone circuits terminate only at district or edge gateways.
+## Integrity
 
-The persistent flow or reservation identity is distinct from the four-bit VCID. A router may bind successive bounded DLP segments of one reserved flow to temporary outgoing VCIDs. The VCID is released after each segment and never becomes an end-to-end transport identifier.
+Traditional GTS packets use mandatory CRC-32 end to end. The tiny CRC-8 rule is retained only for a future compact GTS representation capable of fitting the 0-byte/3-byte GDP classes. Ordinary 32-bit-Tunnel/8-bit-Stream GTS cannot fit those tiny classes.
 
-## Historical transport draft
+GTS CRC binds the complete GTS header/payload to the canonical effective GDP source/destination endpoints and GDP Size Class. Local/compact GDP address representations must expand to the same effective endpoint identities before CRC calculation.
 
-The project previously selected detailed CONNECT and CONNECT_ACK field lists, including fixed source/destination port concepts. Their totals are not octet-aligned and CONNECT contains two receive-window fields. They are preserved in project history as requirements evidence, but are superseded for service selection by the variable-width Service Selector model and are not yet an interoperable encoding.
+## Deferred features
+
+The initial traditional packet-routed profile does not require:
+
+- flow-ID/virtual-circuit based routing optimization;
+- multicast/group transport;
+- unreliable streams;
+- end-to-end congestion control;
+- dynamic route exchange;
+- cryptographic security.
+
+These may be added later without changing the basic GDP packet-routed baseline.
