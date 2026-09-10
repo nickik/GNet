@@ -15,159 +15,97 @@ updated: 2026-09-10
 > [!info] Knowledge graph
 > **Up:** [[Protocols MOC]] · **Related:** [[GTS Transport Packets]] · [[Transport and Flows]] · [[ADR-0005 Tunnels and Streams]] · [[ADR-0009 No GDP Integrity Field]]
 
-Status: **OPEN connection/control layouts; ACCEPTED DATA/ACK, tunnel/stream, sequence, service-selector, and integrity semantics**
+Status: **FROZEN initial packet-routed reliability/lifecycle semantics; OPEN exact control encodings**
 
 GTS is the endpoint transport/session protocol above GDP. The initial traditional packet-routed profile is deliberately narrow: reliable ordered streams over ordinarily routed GDP packets. Unreliable, multicast/group, flow-ID routed, and congestion-control extensions are deferred.
 
-## Tunnel and stream identity
+## Frozen identifier and sequencing model
 
-The initial profile freezes:
+- Tunnel ID: 32 bits, receiver-local.
+- Stream ID: 8 bits, scoped to one tunnel.
+- Packet Sequence: 32 bits, scoped to one stream and counting DATA/DATA_END packets rather than bytes.
+- DATA and ACK are separate packet types; ACK state is never piggybacked on DATA in the initial profile.
 
-- **Tunnel ID: 32 bits, receiver-local.** Each endpoint allocates the Tunnel ID that its peer uses when sending packets to it.
-- **Stream ID: 8 bits, scoped to one tunnel.**
-- **Packet Sequence: 32 bits, scoped to one stream.** Sequence arithmetic is modulo `2^32`.
+A CONNECT exchange establishes the receiver-local Tunnel ID for each direction. Ordinary packets carry only the peer-assigned destination Tunnel ID.
 
-A CONNECT exchange must establish the receiving Tunnel ID for each direction before ordinary DATA can flow. Ordinary packets carry only the destination/receiver-local Tunnel ID, not both endpoints' Tunnel IDs.
+## Frozen reliability model
 
-Stream-allocation parity, reserved Stream IDs, and the exact CONNECT/STREAM_OPEN state machine remain open pending the control-packet layout review.
+GTS uses selective-repeat reliability with a cumulative ACK base and 32-bit receive bitmap.
 
-A separate Reset ID/capability remains part of the design for destructive reset/close operations, but its final width and exact state-machine use remain open.
+Normal ACK policy is:
 
-## DATA and ACK separation
+- ACK every two correctly received DATA/DATA_END packets;
+- if only one packet is pending acknowledgement, ACK on a short delayed-ACK timer;
+- ACK immediately when a gap is detected;
+- ACK immediately when a reported gap is filled and ACK Base advances;
+- ACK immediately when Receive Credit reaches zero or must change to restart a stalled sender.
 
-The initial GTS profile uses **separate DATA and ACK packet types**. DATA never piggybacks an ACK block. This keeps the common data path fixed and small.
+When a bitmap shows a missing outstanding packet followed by one or more positively received later packets, that missing packet is an explicit hole and is retransmitted immediately. Duplicate-ACK counting is not required.
 
-The accepted ordinary DATA fixed header/trailer overhead is 14 bytes:
+A retransmission timer remains mandatory for losses that cannot be exposed by later packets. The initial profile uses an adaptive RTO based on smoothed measured RTT, with one retransmission timer per stream. Exact coefficients/minimum/maximum timing constants remain to be frozen.
 
-```text
-1 byte   Version/Type
-4 bytes  Receiver-local Tunnel ID
-1 byte   Stream ID
-4 bytes  Packet Sequence
-4 bytes  CRC-32
--------------------------------
-14 bytes fixed overhead
-```
+Receive Credit is measured in packets, not bytes.
 
-The payload occupies the remaining GTS bytes supplied by the enclosing GDP Size Class. There is no GTS payload-length field in DATA; the GDP Size Class determines the enclosing packet budget.
+## Tunnel and stream lifecycle
 
-## Packet-based reliability and ACK
+CONNECT simultaneously establishes the tunnel and opens Stream 0 as the initial service stream. Additional streams use STREAM_OPEN/STREAM_ACK.
 
-GTS sequence and acknowledgement semantics operate on complete DATA packets, not byte offsets. Each stream has an independent 32-bit packet sequence space.
+Stream IDs use parity ownership to avoid allocation collisions:
 
-The ACK format is frozen as:
+- CONNECT initiator allocates even Stream IDs;
+- CONNECT responder allocates odd Stream IDs;
+- Stream 0 belongs to the initiator convention and is created by CONNECT.
 
-```text
-Version/Type          1 B
-Tunnel ID             4 B
-Stream ID             1 B
-ACK Base              4 B
-Receive Bitmap        4 B
-Receive Credit        1 B
-Reserved              1 B
-CRC-32                4 B
---------------------------------
-                      20 B
-```
+Graceful stream close is directional. STREAM_CLOSE means the sender will transmit no further DATA/DATA_END in that direction; the opposite direction may remain open. A stream is fully closed only after both directions are closed and required acknowledgement/confirmation state completes.
 
-`ACK Base` is the highest consecutively received DATA packet sequence number. It cumulatively acknowledges every packet through that value.
+RESET is the fatal tunnel-wide termination mechanism. It destroys the tunnel and all streams immediately. Exact RESET encoding and the final Reset-ID/capability decision remain open.
 
-The 32-bit Receive Bitmap describes the next 32 packet sequence numbers after ACK Base. Bit 0 corresponds to `ACK Base + 1`; bit 31 corresponds to `ACK Base + 32`. A set bit means that complete DATA packet has been received correctly; a clear bit means it remains missing.
+## DATA_END
 
-The receiver may buffer correctly received DATA packets beyond a gap. Delivery to the application remains ordered in the initial profile. This is selective-repeat ARQ with cumulative acknowledgement plus a fixed selective-receive bitmap.
+Ordinary DATA retains the fixed no-length format. A partial final transport unit uses the separate DATA_END packet type, which carries an explicit Valid Length for the meaningful application bytes in that final packet. DATA_END consumes a normal sequence number and is acknowledged exactly like DATA.
 
-`Receive Credit` is an 8-bit packet count, not a byte count. It advertises how many additional DATA packets the receiver is prepared to accept for the stream. Zero prevents transmission of new DATA sequence numbers until credit becomes positive. Value 255 means at least 255 additional packets may be accepted.
-
-The Reserved ACK byte is transmitted as zero and ignored on receive in this version.
-
-Exact ACK generation timing, delayed-ACK policy, retransmission timer calculation, and treatment of retransmissions when Receive Credit is zero remain open.
+The exact Valid Length field width and packing remain open.
 
 ## End-to-end integrity
 
-GDP deliberately carries no checksum or CRC. GTS therefore provides mandatory end-to-end integrity for every ordinary GTS packet.
+GDP carries no checksum/CRC, so GTS provides mandatory end-to-end integrity.
 
-CRC width is fixed by the enclosing GDP Size Class and is not negotiated or explicitly encoded:
+- future compact forms using the 0-byte/3-byte tiny GDP classes use CRC-8-GNET;
+- every ordinary larger-class GTS packet uses CRC-32-GNET.
 
-- the dedicated zero-byte and 3-byte tiny GDP classes use CRC-8 when a future compact GTS form permits their use;
-- every larger GDP Size Class uses CRC-32.
+CRC parameters are frozen:
 
-The ordinary initial GTS format cannot fit in the 0-byte or 3-byte GDP classes once the 32-bit Tunnel ID and 8-bit Stream ID are present. Traditional GTS therefore uses the larger classes and CRC-32.
+CRC-8-GNET: polynomial `0x07`, init `0x00`, no reflection, xorout `0x00`, check `123456789 -> 0xF4`.
 
-### CRC-8-GNET
+CRC-32-GNET: polynomial `0x04C11DB7`, init `0xFFFFFFFF`, no reflection, xorout `0xFFFFFFFF`, most-significant byte first, check `123456789 -> 0xFC891918`.
 
-- width: 8
-- polynomial: `0x07` (`x^8 + x^2 + x + 1`)
-- initial register: `0x00`
-- input/output reflection: no
-- final XOR: `0x00`
-- check value for ASCII `123456789`: `0xF4`
+The CRC covers canonical GDP context plus the complete GTS header/payload. The canonical GDP contribution is GDP Version, GDP Type=`0x2`, GDP Size Class, effective 64-bit Source Address, and effective 64-bit Destination Address. Local GDP addresses are expanded to their canonical endpoint identities first. Hop Limit, Local/Global representation, reserved bits, and other mutable forwarding state are excluded.
 
-### CRC-32-GNET
-
-- width: 32
-- polynomial: `0x04C11DB7`
-- initial register: `0xFFFFFFFF`
-- input/output reflection: no
-- final XOR: `0xFFFFFFFF`
-- transmitted CRC byte order: most-significant byte first
-- check value for ASCII `123456789`: `0xFC891918`
-
-These choices deliberately favor a simple MSB-first shift-register implementation appropriate to early hardware.
-
-### GDP pseudo-header binding
-
-The GTS CRC is calculated over a canonical GDP context followed by the complete GTS header and payload. The initial pseudo-header is:
-
-```text
-GDP Version                 4 bits, canonicalized
-GDP Type                    4 bits; GTS = 0x2
-GDP Size Class              4 bits
-Effective Source Address   64 bits
-Effective Destination      64 bits
-GTS header
-GTS payload
-```
-
-For Global GDP, the effective addresses are the transmitted 64-bit addresses. For Local GDP, the 8-bit local Source and Destination IDs are expanded using the known local prefix/context to their canonical 64-bit GDP addresses before CRC calculation.
-
-The Local/Global representation bit itself is not CRC input. Hop Limit is excluded because routers legitimately decrement it. Reserved bits and mutable hop-local representation state are excluded.
-
-A packet that fails GTS CRC validation is discarded and treated as not received. No positive acknowledgement may be generated from failed DATA.
-
-CRC provides accidental-error detection, not authentication or secrecy.
+Failed CRC means the packet is discarded and treated as not received.
 
 ## Service selection
 
-GTS does not use TCP-style fixed 16-bit source and destination ports. Transport identity and service identity are separate:
+GTS does not use TCP-style fixed ports. Service selection is setup-only through the accepted variable-width Service Selector model; ordinary DATA/ACK packets carry only Tunnel ID and Stream ID.
 
-- Tunnel ID identifies an established transport association;
-- Stream ID identifies one flow within a tunnel;
-- Service Selector identifies the logical service requested during setup.
+## Explicitly deferred
 
-The Service Selector begins with a 2-bit Size Class:
-
-| Size class | Selector field | Representation |
-|---:|---:|---|
-| 0 | 8 bits | numeric registered service code |
-| 1 | 32 bits | short fixed-width textual service selector |
-| 2 | 128 bits | long fixed-width textual/private selector |
-| 3 | reserved | future expansion |
-
-The exact restricted character alphabet/packing for textual selectors remains open.
-
-The selector is carried only during service setup. Ordinary DATA packets do not repeat it.
-
-Service enumeration is optional and belongs to higher-level discovery/directory facilities.
-
-## Explicitly deferred from the initial profile
-
-The following are not required to finish the traditional packet-routed GTS baseline:
-
-- flow-ID or virtual-circuit routed optimization;
-- multicast/group streams;
-- end-to-end congestion-control algorithm;
+- flow-ID/virtual-circuit routed optimization;
+- multicast/group transport;
 - unreliable stream profiles;
+- end-to-end congestion-control algorithm;
 - cryptographic authentication/encryption;
-- dynamic route behavior.
+- dynamic routing behavior.
 
-The remaining initial-profile work is the exact GTS packet-type registry, CONNECT/STREAM_OPEN state machines, ACK generation/retransmission timing, graceful close/reset behavior, padding rules, and golden packet vectors.
+## Remaining initial-profile work
+
+The major behavioral decisions are now frozen. Remaining work is mostly wire closure:
+
+- numeric GTS packet-type registry;
+- CONNECT / CONNECT_ACK exact layout;
+- STREAM_OPEN / STREAM_ACK exact layout;
+- DATA_END Valid Length width/placement;
+- STREAM_CLOSE / close-confirmation exact layout;
+- RESET layout and Reset-ID decision;
+- numerical delayed-ACK/RTO constants;
+- stale-packet/Stream-ID reuse rules;
+- padding rules and golden vectors.
