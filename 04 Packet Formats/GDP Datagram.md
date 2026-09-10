@@ -12,13 +12,13 @@ updated: 2026-09-10
 ---
 # GDP datagram packet
 
-Status: **FROZEN semantic field set; DRAFT exact encoding and size-class registry**
+Status: **FROZEN initial size-class registry and processing rules; DRAFT exact local/global encoding**
 
 GDP is the Layer-3 routed datagram protocol. It contains no session, reliability, flow-control, or integrity state. Link credits belong to GLCP/DLP and transport state belongs above GDP.
 
-## Current 20-octet encoding candidate
+## Current global 20-octet encoding candidate
 
-The current compact candidate keeps a 20-octet GDP header while preserving 64-bit addresses:
+The current global candidate keeps a 20-octet GDP header while preserving 64-bit addresses:
 
 ```text
     Word 1 — logical protocol word, not a physical flit
@@ -43,28 +43,26 @@ The current compact candidate keeps a 20-octet GDP header while preserving 64-bi
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
-Fields are packed continuously across the baseline 32 carried bits of successive flits. A 160-bit header therefore consumes exactly five VC2 flits. The exact malformed-packet rules and Version/Type/QoS registries remain DRAFT.
+This exact first-word packing remains under review because the initial profile has not yet frozen the role of the current `Type` and `QoS` fields or the compact/local address-mode encoding. The 64-bit global source/destination semantics and four-bit Size Class are retained.
 
-## Fields
+## Current fields under review
 
-| Field | Bits | Meaning |
+| Field | Bits | State |
 |---|---:|---|
-| Version | 4 | GDP wire version. |
-| Type | 4 | GDP payload/protocol type. |
-| Size Class | 4 | Selects one fixed GDP payload size. |
-| Hop Limit | 8 | Decremented at every GDP router. |
-| QoS | 8 | Network forwarding/service marking subject to policy. |
-| Reserved | 4 | Wire-format reserve; transmit zero, ignore on receive. |
-| Destination Address | 64 | Hierarchical destination GDP address. |
-| Source Address | 64 | Hierarchical source GDP address. |
+| Version | 4 | retained |
+| Type | 4 | purpose under review for initial profile |
+| Size Class | 4 | **frozen** |
+| Hop Limit | 8 | **frozen** |
+| QoS | 8 | not accepted for the initial profile unless explicit semantics are defined |
+| Reserved | 4 | draft packing reserve |
+| Destination Address | 64 | **frozen global form** |
+| Source Address | 64 | **frozen global form** |
 
 GDP contains **no header checksum, CRC, Flow Control ID, session ID, fragmentation state, or option chain**.
 
-Destination precedes source so a Switch or Router can select its output after the first three carried flits, before receiving the source address. The source remains available for policy, diagnostics, and return traffic after forwarding has begun.
-
 ## GDP package size classes
 
-GDP retains a 4-bit explicit size-class field. For the current candidate, the sixteen values are deliberately concentrated below 2 KiB, where normal interactive, control, voice, and bulk traffic benefits most from finer granularity. Only two larger jumbo classes are retained for now.
+The initial traditional packet-routed profile freezes this explicit four-bit size registry. It is deliberately concentrated below 2 KiB and provides only two jumbo classes.
 
 | ID | Name | Payload bytes |
 |---:|---|---:|
@@ -85,16 +83,37 @@ GDP retains a 4-bit explicit size-class field. For the current candidate, the si
 | 14 | `jumbo4K` | 4096 |
 | 15 | `jumbo8K` | 8192 |
 
-The table is intentionally explicit rather than generated from a mathematical sequence. It is a provisional engineering registry and may be revised later without changing the four-bit Size Class field itself.
+The 3-byte class is retained as a deliberate optimization for very small traffic such as packet voice and compact local exchanges. It is too small to carry the ordinary uncompressed GTS header defined by the current 32-bit Tunnel ID / 8-bit Stream ID direction; its use by GTS would require a separate compact form and is not part of the initial traditional GTS profile.
 
-The 3-byte class is retained as a deliberate optimization for very small traffic such as packet voice and compact local exchanges. The 1500-byte class is retained for convenient interoperation with common external network packet sizes. Above 2 KiB, the registry becomes intentionally coarse.
+A physical/link profile MAY restrict which GDP classes it accepts. GDP itself does not fragment a package in transit.
 
-A physical/link profile MAY restrict which GDP classes it accepts. In particular GC3 deliberately excludes large/jumbo classes; see [[GNet Coupler]].
+## Malformed and failed packet handling
+
+An invalid GDP packet is never forwarded as though it were valid. The receiving node/router drops it and, when a valid routable source is available and GCTL error-generation rules permit a reply, reports the failure using the defined GCTL mechanism.
+
+Baseline mapping:
+
+| Condition | Action / GCTL result |
+|---|---|
+| unsupported GDP version | drop; `PARAMETER_PROBLEM` code 0 |
+| malformed header or invalid field combination | drop; `PARAMETER_PROBLEM` code 1 |
+| invalid address representation | drop; `PARAMETER_PROBLEM` code 3 |
+| unsupported GDP payload type, if Type remains in the final format | drop; `DESTINATION_UNREACHABLE` code 2 |
+| no route | drop; `DESTINATION_UNREACHABLE` code 0 |
+| destination unknown/unreachable | drop; `DESTINATION_UNREACHABLE` code 1 |
+| Hop Limit expires | drop; `HOP_LIMIT_EXCEEDED` code 0 |
+| outgoing profile cannot carry Size Class | drop; `CLASS_UNSUPPORTED` |
+| detected static routing loop / invalid route state | drop; `DESTINATION_UNREACHABLE` code 7 |
+| packet accepted for forwarding but later aborted | drop; `TRANSIT_ABORTED` with the applicable reason |
+
+Error generation is best effort and follows the GCTL anti-recursion and rate-limiting rules. A failure to return an error never implies successful delivery.
 
 ## Processing rules
 
+- A router performs destination lookup on every traditional packet-routed GDP package.
 - A router decrements Hop Limit before forwarding; expiry discards the packet.
 - GDP itself does not fragment a package.
-- Source and Destination are transmitted most-significant bit first.
+- Global Source and Destination are transmitted most-significant bit first.
 - Link/profile capability constrains usable Size Classes where required.
-- Header corruption is handled by hop-local DLP integrity; GDP does not add a second checksum.
+- GDP adds no end-to-end checksum; GTS supplies end-to-end integrity for GTS payloads.
+- Flow-ID/virtual-circuit based routing optimization is outside the initial traditional packet-routed profile.
