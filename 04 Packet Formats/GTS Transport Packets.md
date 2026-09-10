@@ -12,17 +12,61 @@ updated: 2026-09-10
 ---
 # GTS transport packets
 
-Status: **OPEN exact DATA/ACK/control packing; identifier and integrity widths accepted**
+Status: **FROZEN ordinary DATA layout and core identifier widths; OPEN ACK/control packing**
 
 The initial traditional packet-routed GTS profile uses:
 
 - 32-bit receiver-local Tunnel IDs;
 - 8-bit Stream IDs scoped to one tunnel;
+- 32-bit packet sequence numbers scoped to one stream;
 - reliable ordered streams;
+- separate DATA and ACK packet types;
 - packet-by-packet GDP routing;
 - mandatory end-to-end CRC.
 
 Flow-ID routing, multicast/group transport, unreliable streams, and transport congestion control are outside this initial profile.
+
+## Ordinary DATA packet
+
+The ordinary DATA packet has a fixed 10-byte GTS header followed by application payload and a 4-byte CRC-32 trailer:
+
+```text
++-------------------------------+
+| Version 4 | Type 4            | 1 byte
++-------------------------------+
+| Receiver Tunnel ID            | 4 bytes
++-------------------------------+
+| Stream ID                     | 1 byte
++-------------------------------+
+| Packet Sequence               | 4 bytes
++-------------------------------+
+| Application payload           | variable within GDP Size Class
++-------------------------------+
+| CRC-32-GNET                   | 4 bytes
++-------------------------------+
+```
+
+Fixed overhead is therefore 14 bytes:
+
+```text
+1  Version/Type
+4  Tunnel ID
+1  Stream ID
+4  Sequence
+4  CRC-32
+--------------
+14 bytes
+```
+
+DATA does not carry acknowledgement state, receive credit, service selector, Reset ID, source Tunnel ID, QoS, flags, or a payload-length field.
+
+The Packet Sequence field is 32 bits. Sequence numbers are interpreted modulo `2^32` and are independent for each Stream ID within a tunnel.
+
+## DATA/ACK separation
+
+ACK is a distinct GTS packet type. DATA MUST NOT piggyback an ACK block in the initial profile. Bidirectional streams therefore use independent DATA packets and independent ACK packets in each direction.
+
+The exact ACK layout remains OPEN. The working reliability direction remains selective acknowledgement using an ACK base plus a fixed bitmap and receive-credit indication.
 
 ## Mandatory integrity trailer
 
@@ -62,23 +106,19 @@ CRC-32-GNET
 The CRC input is the canonical GDP pseudo-header followed by the complete GTS header and payload. The CRC trailer itself is not included in the calculation.
 
 ```text
-+-----------------------------------------------+
-| canonical GDP pseudo-header                   |
-|  effective source address                     |
-|  effective destination address                |
-|  GDP Size Class                               |
-|  GDP protocol context / Type if retained      |
-+-----------------------------------------------+
-| complete GTS header                           |
-+-----------------------------------------------+
-| complete GTS payload                          |
-+-----------------------------------------------+
-             -> CRC-8 or CRC-32
+GDP Version
+GDP Type = 0x2 (GTS)
+GDP Size Class
+effective 64-bit Source Address
+effective 64-bit Destination Address
+complete GTS header
+complete GTS payload
+        -> CRC-32-GNET for ordinary GTS
 ```
 
-For the traditional routed profile, effective source and destination are canonical 64-bit GDP endpoint identities. A compact/local GDP representation must expand its abbreviated addresses to those same effective endpoint identities before CRC calculation. Thus local/global wire representation may change at a router without changing GTS end-to-end integrity.
+For Global GDP, the effective addresses are the transmitted 64-bit addresses. For Local GDP, both transmitted addresses are 8-bit local IDs and are expanded using the known local prefix/context to their canonical 64-bit endpoint addresses before CRC calculation.
 
-Hop Limit, local/global representation bits, reserved bits, and other mutable forwarding/representation fields are excluded from the pseudo-header. If GDP retains its current next-protocol `Type` field, that Type is included; if it is removed, a fixed GTS protocol-domain constant replaces it.
+Hop Limit, the Local/Global representation bit, reserved bits, and other mutable representation fields are excluded.
 
 A failed CRC causes the packet to be discarded and treated as not received. Corrupted DATA MUST NOT be positively acknowledged.
 
@@ -95,10 +135,10 @@ When setup selects a logical service, it carries a 2-bit selector class followed
 
 The selector is setup-only. Once a service has been accepted and bound to tunnel/stream state, DATA packets use only Tunnel ID and Stream ID.
 
-## Packet layouts still to freeze
+## Packet types still to freeze
 
-The exact numeric packet-type registry and detailed packet layouts remain under review. At minimum the initial profile needs CONNECT, CONNECT_ACK, STREAM_OPEN, STREAM_ACK/ACCEPT, DATA, ACK, STREAM_CLOSE, tunnel close, and RESET semantics.
+The exact numeric packet-type registry and detailed control packet layouts remain under review. At minimum the initial profile needs CONNECT, CONNECT_ACK, STREAM_OPEN, STREAM_ACK, DATA, ACK, STREAM_CLOSE, tunnel close, and RESET semantics.
 
 Unknown/undefined GTS packet types in the final registry are discarded. No implementation may reinterpret an undefined type as DATA or another known packet form.
 
-The next wire-format decision is the exact DATA and ACK layout, including sequence-number width, ACK bitmap/credit representation, and whether any DATA flags are required.
+The next wire-format decision is the exact ACK layout and then the CONNECT/STREAM_OPEN/close/reset control packets.
