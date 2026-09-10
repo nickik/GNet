@@ -12,14 +12,15 @@ updated: 2026-09-10
 ---
 # GTS transport packets
 
-Status: **FROZEN ordinary DATA layout and core identifier widths; OPEN ACK/control packing**
+Status: **FROZEN ordinary DATA and ACK layouts; OPEN connection/control packing**
 
 The initial traditional packet-routed GTS profile uses:
 
 - 32-bit receiver-local Tunnel IDs;
 - 8-bit Stream IDs scoped to one tunnel;
 - 32-bit packet sequence numbers scoped to one stream;
-- reliable ordered streams;
+- reliable ordered packet delivery within each stream;
+- selective-repeat acknowledgement;
 - separate DATA and ACK packet types;
 - packet-by-packet GDP routing;
 - mandatory end-to-end CRC.
@@ -60,13 +61,106 @@ Fixed overhead is therefore 14 bytes:
 
 DATA does not carry acknowledgement state, receive credit, service selector, Reset ID, source Tunnel ID, QoS, flags, or a payload-length field.
 
-The Packet Sequence field is 32 bits. Sequence numbers are interpreted modulo `2^32` and are independent for each Stream ID within a tunnel.
+The Packet Sequence field is 32 bits. Sequence numbers identify DATA packets, not byte offsets, and are interpreted modulo `2^32`. Sequence spaces are independent for each Stream ID within a tunnel.
+
+## ACK packet
+
+The ACK packet format is frozen as:
+
+```text
+ACK
+--------------------------------
+Version/Type          1 B
+Tunnel ID             4 B
+Stream ID             1 B
+ACK Base              4 B
+Receive Bitmap        4 B
+Receive Credit        1 B
+Reserved              1 B
+CRC-32                4 B
+--------------------------------
+                      20 B
+```
+
+Logical layout:
+
+```text
++-------------------------------+
+| Version 4 | Type = ACK 4      | 1 byte
++-------------------------------+
+| Receiver Tunnel ID            | 4 bytes
++-------------------------------+
+| Stream ID                     | 1 byte
++-------------------------------+
+| ACK Base                      | 4 bytes
++-------------------------------+
+| Receive Bitmap                | 4 bytes
++-------------------------------+
+| Receive Credit                | 1 byte
++-------------------------------+
+| Reserved                      | 1 byte
++-------------------------------+
+| CRC-32-GNET                   | 4 bytes
++-------------------------------+
+```
+
+The Reserved byte MUST be transmitted as zero and ignored on receipt in this version.
+
+ACK is normally carried in the 32-byte GDP Size Class. Unused bytes in the enclosing fixed-size GDP payload are padding/reserved according to the final GTS padding rule.
+
+### ACK Base
+
+`ACK Base` is the highest DATA packet sequence number such that that packet and every preceding packet in the current receive sequence space have been received correctly.
+
+Thus `ACK Base = N` cumulatively acknowledges every packet through `N`.
+
+### Receive Bitmap
+
+The 32-bit Receive Bitmap selectively reports receipt of the next 32 packet sequence numbers after ACK Base:
+
+```text
+bit 0  -> ACK Base + 1
+bit 1  -> ACK Base + 2
+...
+bit 31 -> ACK Base + 32
+```
+
+A bit value of `1` means the corresponding complete DATA packet has been received correctly and retained/accepted by the receiver. A bit value of `0` means it has not been received correctly and is still considered missing.
+
+The sender retransmits missing packets as required by the GTS retransmission rules; packets positively acknowledged by ACK Base or a set bitmap bit need not be retransmitted.
+
+### Receive Credit
+
+`Receive Credit` is an unsigned 8-bit count of additional DATA packets that the receiver is currently prepared to accept for this stream beyond the packets already represented as received/outstanding state.
+
+The unit is packets, not bytes. Because each stream uses packet-sequence semantics, this allows simple receiver buffer accounting.
+
+`0` means the sender must not introduce new DATA packets for that stream until later ACK state advertises positive credit. Retransmission of already-outstanding packets remains governed by the final retransmission/credit rule and must not be interpreted as creation of new sequence state.
+
+`255` means at least 255 additional DATA packets may be accepted; no larger value is represented in the initial format.
+
+### Selective-repeat behavior
+
+GTS acknowledgements operate on whole DATA packets, never byte ranges. The receiver may retain correctly received packets beyond a gap and identify them in the bitmap. Application delivery remains ordered: later packets are not delivered ahead of a missing earlier packet unless a future stream profile explicitly changes this rule.
+
+Example:
+
+```text
+Received: 100 101 [102 missing] 103 104 [105 missing] 106
+
+ACK Base       = 101
+Bitmap bit 0   = 0   ; packet 102 missing
+Bitmap bit 1   = 1   ; packet 103 received
+Bitmap bit 2   = 1   ; packet 104 received
+Bitmap bit 3   = 0   ; packet 105 missing
+Bitmap bit 4   = 1   ; packet 106 received
+```
+
+If packet 102 later arrives, ACK Base may advance through all contiguous packets already present, stopping at the next hole.
 
 ## DATA/ACK separation
 
 ACK is a distinct GTS packet type. DATA MUST NOT piggyback an ACK block in the initial profile. Bidirectional streams therefore use independent DATA packets and independent ACK packets in each direction.
-
-The exact ACK layout remains OPEN. The working reliability direction remains selective acknowledgement using an ACK base plus a fixed bitmap and receive-credit indication.
 
 ## Mandatory integrity trailer
 
@@ -137,8 +231,8 @@ The selector is setup-only. Once a service has been accepted and bound to tunnel
 
 ## Packet types still to freeze
 
-The exact numeric packet-type registry and detailed control packet layouts remain under review. At minimum the initial profile needs CONNECT, CONNECT_ACK, STREAM_OPEN, STREAM_ACK, DATA, ACK, STREAM_CLOSE, tunnel close, and RESET semantics.
+The exact numeric packet-type registry and detailed connection/control packet layouts remain under review. At minimum the initial profile needs CONNECT, CONNECT_ACK, STREAM_OPEN, STREAM_ACK, DATA, ACK, STREAM_CLOSE, tunnel close, and RESET semantics.
 
 Unknown/undefined GTS packet types in the final registry are discarded. No implementation may reinterpret an undefined type as DATA or another known packet form.
 
-The next wire-format decision is the exact ACK layout and then the CONNECT/STREAM_OPEN/close/reset control packets.
+The next wire-format decisions are the CONNECT/STREAM_OPEN/close/reset control packets, ACK transmission timing, retransmission timing, and final padding/golden-vector rules.
