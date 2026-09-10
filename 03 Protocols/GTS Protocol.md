@@ -15,7 +15,7 @@ updated: 2026-09-10
 > [!info] Knowledge graph
 > **Up:** [[Protocols MOC]] · **Related:** [[GTS Transport Packets]] · [[Transport and Flows]] · [[ADR-0005 Tunnels and Streams]] · [[ADR-0009 No GDP Integrity Field]]
 
-Status: **OPEN control/ACK layouts; ACCEPTED initial DATA, tunnel/stream, sequence, service-selector, and integrity semantics**
+Status: **OPEN connection/control layouts; ACCEPTED DATA/ACK, tunnel/stream, sequence, service-selector, and integrity semantics**
 
 GTS is the endpoint transport/session protocol above GDP. The initial traditional packet-routed profile is deliberately narrow: reliable ordered streams over ordinarily routed GDP packets. Unreliable, multicast/group, flow-ID routed, and congestion-control extensions are deferred.
 
@@ -50,6 +50,37 @@ The accepted ordinary DATA fixed header/trailer overhead is 14 bytes:
 ```
 
 The payload occupies the remaining GTS bytes supplied by the enclosing GDP Size Class. There is no GTS payload-length field in DATA; the GDP Size Class determines the enclosing packet budget.
+
+## Packet-based reliability and ACK
+
+GTS sequence and acknowledgement semantics operate on complete DATA packets, not byte offsets. Each stream has an independent 32-bit packet sequence space.
+
+The ACK format is frozen as:
+
+```text
+Version/Type          1 B
+Tunnel ID             4 B
+Stream ID             1 B
+ACK Base              4 B
+Receive Bitmap        4 B
+Receive Credit        1 B
+Reserved              1 B
+CRC-32                4 B
+--------------------------------
+                      20 B
+```
+
+`ACK Base` is the highest consecutively received DATA packet sequence number. It cumulatively acknowledges every packet through that value.
+
+The 32-bit Receive Bitmap describes the next 32 packet sequence numbers after ACK Base. Bit 0 corresponds to `ACK Base + 1`; bit 31 corresponds to `ACK Base + 32`. A set bit means that complete DATA packet has been received correctly; a clear bit means it remains missing.
+
+The receiver may buffer correctly received DATA packets beyond a gap. Delivery to the application remains ordered in the initial profile. This is selective-repeat ARQ with cumulative acknowledgement plus a fixed selective-receive bitmap.
+
+`Receive Credit` is an 8-bit packet count, not a byte count. It advertises how many additional DATA packets the receiver is prepared to accept for the stream. Zero prevents transmission of new DATA sequence numbers until credit becomes positive. Value 255 means at least 255 additional packets may be accepted.
+
+The Reserved ACK byte is transmitted as zero and ignored on receive in this version.
+
+Exact ACK generation timing, delayed-ACK policy, retransmission timer calculation, and treatment of retransmissions when Receive Credit is zero remain open.
 
 ## End-to-end integrity
 
@@ -139,4 +170,4 @@ The following are not required to finish the traditional packet-routed GTS basel
 - cryptographic authentication/encryption;
 - dynamic route behavior.
 
-The remaining initial-profile work is the exact GTS packet-type registry, CONNECT/STREAM_OPEN state machines, ACK layout and bitmap/credit rules, retransmission timing, graceful close/reset behavior, and golden packet vectors.
+The remaining initial-profile work is the exact GTS packet-type registry, CONNECT/STREAM_OPEN state machines, ACK generation/retransmission timing, graceful close/reset behavior, padding rules, and golden packet vectors.
