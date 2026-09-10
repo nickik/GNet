@@ -8,11 +8,11 @@ layers: ["L3"]
 tags: ["gnet","gnet/architecture","gnet/status/mixed","gnet/layer/l3"]
 parent: "[[Architecture MOC]]"
 related: ["[[GDP Protocol]]","[[Address Configuration Packets]]"]
-updated: 2026-09-03
+updated: 2026-09-10
 ---
 # Addressing and routing
 
-Status: **FROZEN principles and 0.1 on-link prefix profile; OPEN routing wire protocol**
+Status: **FROZEN address principles and initial static-routing profile; dynamic routing deferred**
 
 ## Address model
 
@@ -44,10 +44,29 @@ Zero is reserved for an unconfigured/provisional source where a bootstrap profil
 
 Physical port identity is useful local policy input but is not a globally visible MAC address.
 
-## Routing
+## Initial packet-routing profile
 
-Forwarding uses longest/deepest prefix match. A route identifies an egress link/next hop plus policy/metric/validity information.
+The initial GDP routing profile is deliberately conventional and static. Forwarding uses longest/deepest prefix match. A route identifies a destination prefix and an outgoing link/next hop.
 
-Routing capability is **not exclusive to a dedicated router product**. Any capable and authorized GNet host may advertise reachability or delegated prefixes. Dedicated routers package forwarding performance, many interfaces, management, and WAN/trunk functions.
+The initial specification defines only:
 
-Horizontal peering is permitted; a parent/top-level route is fallback, not mandatory transit. The exact route-exchange protocol, authentication, convergence, loop prevention, and delegation encoding remain OPEN.
+- directly connected routes;
+- administratively configured static prefix routes;
+- an optional administratively configured default route;
+- longest-prefix match for every forwarded GDP packet.
+
+No dynamic route-distribution protocol, route metric, path-vector, distance-vector, link-state protocol, automatic convergence algorithm, or inter-domain protocol is defined in the initial profile. Route installation and modification are local administrative operations.
+
+Routing capability is **not exclusive to a dedicated router product**. Any capable and authorized GNet host may forward packets using configured routes. Dedicated routers package forwarding performance, many interfaces, management, and WAN/trunk functions.
+
+The baseline does not define equal-cost multipath or metric-based selection. Administrators SHOULD avoid ambiguous duplicate routes with the same prefix length and destination prefix; implementations MAY reject such ambiguous configuration.
+
+## Loop containment
+
+Because the initial profile has no dynamic routing protocol, it also has no routing-protocol convergence or distributed loop-prevention algorithm. Static loops are configuration errors.
+
+GDP Hop Limit provides mandatory protocol-level containment. Every router decrements Hop Limit before forwarding. A packet whose Hop Limit expires is discarded and, when error reporting is permitted, the router returns the defined GCTL `HOP_LIMIT_EXCEEDED` reason to the source.
+
+A router MAY detect an obvious local/static forwarding loop earlier and discard the packet with the defined GCTL routing-loop/invalid-route-state reason, but such detection is an optimization and is not required for correctness. Implementations MUST NOT depend on loop detection other than Hop Limit.
+
+Dynamic route exchange, automatic convergence, route metrics, and stronger loop-avoidance mechanisms are deferred to a later routing specification.
