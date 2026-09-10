@@ -12,57 +12,86 @@ updated: 2026-09-10
 ---
 # GDP datagram packet
 
-Status: **FROZEN initial size-class registry and processing rules; DRAFT exact local/global encoding**
+Status: **FROZEN initial field semantics, size classes, local/global forms, and processing rules; DRAFT final bit packing**
 
 GDP is the Layer-3 routed datagram protocol. It contains no session, reliability, flow-control, or integrity state. Link credits belong to GLCP/DLP and transport state belongs above GDP.
 
-## Current global 20-octet encoding candidate
+## Address forms
 
-The current global candidate keeps a 20-octet GDP header while preserving 64-bit addresses:
+The initial profile defines exactly two GDP address forms. Mixed short/full source and destination encoding is not supported.
+
+- **Local form** — both Source and Destination are 8-bit local identifiers within the same known local GDP prefix/context.
+- **Global form** — both Source and Destination are complete 64-bit GDP addresses.
+
+A one-bit Local/Global indicator is sufficient. The exact placement of that bit in the first protocol word remains a packing detail.
+
+Local GDP is non-routable beyond the local context as encoded. A router/gateway that sends traffic beyond that context constructs a new Global-form GDP packet using the canonical 64-bit source and destination identities. Likewise, when delivering global traffic onto a local context, a router may emit a new Local-form GDP packet only when both endpoints can be represented by that local context. There is no Local->Global or Global->Local mixed wire form.
+
+## Global form
+
+The global form carries:
 
 ```text
-    Word 1 — logical protocol word, not a physical flit
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | Ver   | Type  | Size  | Hop Limit  |      QoS      |Reserved |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-    Words 2-3
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                    Destination Address                        |
-   +                                                               +
-   |                         64 bits                               |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-    Words 4-5
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                       Source Address                          |
-   +                                                               +
-   |                         64 bits                               |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Version              4 bits
+Type                 4 bits
+Size Class           4 bits
+Address Form          1 bit = GLOBAL
+Hop Limit             8 bits
+Reserved              remaining fixed-header bits
+Destination Address  64 bits
+Source Address       64 bits
 ```
 
-This exact first-word packing remains under review because the initial profile has not yet frozen the role of the current `Type` and `QoS` fields or the compact/local address-mode encoding. The 64-bit global source/destination semantics and four-bit Size Class are retained.
+The final packing of the fixed control bits remains DRAFT. QoS/Traffic Class is not part of the initial GDP profile; any old QoS bits are reserved until a future extension defines semantics.
 
-## Current fields under review
+## Local form
+
+The local form carries the same protocol-control semantics but both addresses are 8-bit local identifiers:
+
+```text
+Version              4 bits
+Type                 4 bits
+Size Class           4 bits
+Address Form          1 bit = LOCAL
+Hop Limit             8 bits
+Reserved              remaining fixed-header bits
+Destination ID        8 bits
+Source ID             8 bits
+```
+
+The local prefix/context is known from the link/network configuration and is not repeated in every packet. A local 8-bit identifier therefore expands to one canonical 64-bit GDP address when endpoint identity is required above GDP.
+
+## Frozen GDP Type registry
+
+The initial traditional packet-routed profile uses the 4-bit Type field only to distinguish the two required GDP payload protocols:
+
+| Value | Type | Meaning |
+|---:|---|---|
+| `0x0` | RESERVED | invalid/unassigned |
+| `0x1` | GCTL | GNet routed control/error/diagnostic payload |
+| `0x2` | GTS | GNet transport/session payload |
+| `0x3`-`0xF` | RESERVED | undefined in this profile |
+
+An undefined/reserved Type is not passed upward as another protocol. The packet is dropped and, when a valid routable source exists and GCTL rules permit, the sender is informed using the defined unsupported-payload-type error.
+
+## Frozen GDP fields
 
 | Field | Bits | State |
 |---|---:|---|
-| Version | 4 | retained |
-| Type | 4 | purpose under review for initial profile |
-| Size Class | 4 | **frozen** |
-| Hop Limit | 8 | **frozen** |
-| QoS | 8 | not accepted for the initial profile unless explicit semantics are defined |
-| Reserved | 4 | draft packing reserve |
-| Destination Address | 64 | **frozen global form** |
-| Source Address | 64 | **frozen global form** |
+| Version | 4 | frozen semantic width |
+| Type | 4 | frozen initial registry |
+| Size Class | 4 | frozen |
+| Address Form | 1 | frozen semantic meaning: Local or Global only |
+| Hop Limit | 8 | frozen |
+| QoS / Traffic Class | — | not present in initial profile |
+| Destination | 8 or 64 | both local/global forms frozen |
+| Source | 8 or 64 | both local/global forms frozen |
 
-GDP contains **no header checksum, CRC, Flow Control ID, session ID, fragmentation state, or option chain**.
+GDP contains **no header checksum, CRC, Flow Control ID, session ID, fragmentation state, option chain, or QoS field** in the initial profile.
 
 ## GDP package size classes
 
-The initial traditional packet-routed profile freezes this explicit four-bit size registry. It is deliberately concentrated below 2 KiB and provides only two jumbo classes.
+The initial traditional packet-routed profile freezes this explicit four-bit size registry.
 
 | ID | Name | Payload bytes |
 |---:|---|---:|
@@ -83,7 +112,7 @@ The initial traditional packet-routed profile freezes this explicit four-bit siz
 | 14 | `jumbo4K` | 4096 |
 | 15 | `jumbo8K` | 8192 |
 
-The 3-byte class is retained as a deliberate optimization for very small traffic such as packet voice and compact local exchanges. It is too small to carry the ordinary uncompressed GTS header defined by the current 32-bit Tunnel ID / 8-bit Stream ID direction; its use by GTS would require a separate compact form and is not part of the initial traditional GTS profile.
+The 3-byte class is retained as a deliberate optimization for very small traffic. It is too small for the ordinary GTS DATA header and is not used by the initial traditional GTS format.
 
 A physical/link profile MAY restrict which GDP classes it accepts. GDP itself does not fragment a package in transit.
 
@@ -97,8 +126,8 @@ Baseline mapping:
 |---|---|
 | unsupported GDP version | drop; `PARAMETER_PROBLEM` code 0 |
 | malformed header or invalid field combination | drop; `PARAMETER_PROBLEM` code 1 |
-| invalid address representation | drop; `PARAMETER_PROBLEM` code 3 |
-| unsupported GDP payload type, if Type remains in the final format | drop; `DESTINATION_UNREACHABLE` code 2 |
+| invalid local/global address form or local identifier | drop; `PARAMETER_PROBLEM` code 3 |
+| reserved/undefined GDP Type | drop; `DESTINATION_UNREACHABLE` code 2 |
 | no route | drop; `DESTINATION_UNREACHABLE` code 0 |
 | destination unknown/unreachable | drop; `DESTINATION_UNREACHABLE` code 1 |
 | Hop Limit expires | drop; `HOP_LIMIT_EXCEEDED` code 0 |
@@ -106,11 +135,12 @@ Baseline mapping:
 | detected static routing loop / invalid route state | drop; `DESTINATION_UNREACHABLE` code 7 |
 | packet accepted for forwarding but later aborted | drop; `TRANSIT_ABORTED` with the applicable reason |
 
-Error generation is best effort and follows the GCTL anti-recursion and rate-limiting rules. A failure to return an error never implies successful delivery.
+Error generation is best effort and follows the GCTL anti-recursion and rate-limiting rules.
 
 ## Processing rules
 
-- A router performs destination lookup on every traditional packet-routed GDP package.
+- A router performs destination lookup on every traditional packet-routed Global GDP package.
+- Local GDP is confined to its local addressing context and does not use mixed local/global address forms.
 - A router decrements Hop Limit before forwarding; expiry discards the packet.
 - GDP itself does not fragment a package.
 - Global Source and Destination are transmitted most-significant bit first.
