@@ -12,7 +12,7 @@ updated: 2026-09-10
 ---
 # GNet Datagram Protocol (GDP)
 
-Status: **FROZEN semantic field set; DRAFT encoding**
+Status: **FROZEN semantic field set; DRAFT encoding and size-class registry**
 
 GDP is the common routed Layer-3 protocol. Its header remains deliberately minimal.
 
@@ -20,7 +20,7 @@ GDP is the common routed Layer-3 protocol. Its header remains deliberately minim
 
 - **Version** selects the GDP wire version.
 - **Type** identifies the payload protocol.
-- **Size Class** identifies the fixed GDP package payload size.
+- **Size Class** is a 4-bit field selecting one of sixteen fixed GDP package payload sizes.
 - **Hop Limit** is decremented at each GDP router; a packet reaching zero is discarded.
 - **QoS** selects forwarding/service treatment subject to local policy.
 - **Source** and **Destination** are 64-bit GDP addresses.
@@ -28,6 +28,8 @@ GDP is the common routed Layer-3 protocol. Its header remains deliberately minim
 GDP MUST NOT acquire a payload-length field, checksum, CRC, hash, integrity flag/trailer, fragmentation state, options, flow/session ID, sequence number, acknowledgement, receive window, or encryption metadata.
 
 DLP/GLCP supply hop-local transfer framing, integrity, credits, and scheduling. Endpoints supply end-to-end integrity, reliability, fragmentation/reassembly where required, and session state above GDP.
+
+The current sixteen-value Size Class registry is explicitly enumerated in [[GDP Datagram]]. It is deliberately dense below 2 KiB and retains only 4 KiB and 8 KiB jumbo classes. The registry is provisional and may be revised later without widening or otherwise changing the 4-bit Size Class field.
 
 For GTS payloads, GTS supplies mandatory end-to-end CRC protection. The GTS CRC is bound to a GDP pseudo-header containing the relevant effective source endpoint, effective destination endpoint, GDP Type, and GDP Size Class. This binding is mandatory in both global GDP operation and any compact/local GDP encoding; local operation uses the corresponding effective local endpoint fields rather than omitting the GDP binding. Mutable forwarding fields such as Hop Limit are not part of the end-to-end pseudo-header.
 
