@@ -15,36 +15,82 @@ updated: 2026-09-10
 > [!info] Knowledge graph
 > **Up:** [[Protocols MOC]] · **Related:** [[GTS Transport Packets]] · [[Transport and Flows]] · [[ADR-0005 Tunnels and Streams]] · [[ADR-0009 No GDP Integrity Field]]
 
-Status: **OPEN wire format; ACCEPTED tunnel/stream, service-selector, and integrity semantics**
+Status: **OPEN exact packet layouts; ACCEPTED initial tunnel/stream, service-selector, and integrity semantics**
 
-GTS is the endpoint protocol family above GDP. It must support unreliable messages, reliable ordered delivery, multiplexed sessions, and reserved real-time flows without adding state to ordinary GDP forwarding.
+GTS is the endpoint transport/session protocol above GDP. The initial traditional packet-routed profile is deliberately narrow: reliable ordered streams over ordinarily routed GDP packets. Unreliable, multicast/group, flow-ID routed, and congestion-control extensions are deferred.
 
-GTS uses a tunnel-first model. A Tunnel ID identifies the association; a Reset ID authorizes close, reset, and rebind but is omitted from ordinary data. Streams within the tunnel may independently select reliable/unreliable, ordered/sequenced, message/byte, encryption, and compression behavior.
+## Tunnel and stream identity
+
+The initial profile freezes:
+
+- **Tunnel ID: 32 bits, receiver-local.** Each endpoint allocates the Tunnel ID that its peer uses when sending packets to it. A Tunnel ID need only be unique among active tunnels at the receiving endpoint; it is not globally unique.
+- **Stream ID: 8 bits, scoped to one tunnel.** Stream identity is therefore compact and independent of GDP addresses.
+
+A CONNECT exchange must establish the receiving Tunnel ID for each direction before ordinary DATA can flow. Ordinary packets carry only the destination/receiver-local Tunnel ID, not both endpoints' Tunnel IDs.
+
+Stream-allocation parity, reserved Stream IDs, and the exact CONNECT/STREAM_OPEN state machine remain open pending the packet-layout review.
+
+A separate Reset ID/capability remains part of the design for destructive reset/close/rebind operations, but its final width and exact state-machine use remain open.
 
 ## End-to-end integrity
 
-GDP deliberately carries no checksum or CRC. GTS therefore provides mandatory end-to-end integrity for every GTS packet.
+GDP deliberately carries no checksum or CRC. GTS therefore provides mandatory end-to-end integrity for every ordinary GTS packet.
 
-The integrity width is fixed by the enclosing GDP Size Class and is not negotiated or explicitly encoded in GTS:
+CRC width is fixed by the enclosing GDP Size Class and is not negotiated or explicitly encoded:
 
-- the dedicated zero-byte and 3-byte tiny GDP classes use CRC-8;
+- the dedicated zero-byte and 3-byte tiny GDP classes use CRC-8 when a future compact GTS form permits their use;
 - every larger GDP Size Class uses CRC-32.
 
-The exact CRC-8 and CRC-32 polynomials, initialization, reflection, byte order, and golden vectors remain OPEN and must be frozen with the wire format.
+The ordinary initial GTS format cannot fit in the 0-byte or 3-byte GDP classes once the 32-bit Tunnel ID and 8-bit Stream ID are present. Traditional GTS therefore uses the larger classes and CRC-32. The tiny CRC-8 rule is retained for a future compact/tiny GTS encoding rather than forcing CRC-32 overhead onto such a form.
 
-The CRC covers the complete GTS header and GTS payload together. It also incorporates a GDP pseudo-header containing the GDP fields relevant to end-to-end delivery and interpretation. At minimum this includes the effective source identity, effective destination identity, GDP payload protocol Type, and GDP Size Class. The pseudo-header fields are checksum input only and are not duplicated on the wire inside GTS.
+### CRC-8-GNET
 
-This requirement applies equally to **global and local operation**. Global mode incorporates the relevant global GDP source/destination fields. Any compact/local GDP mode incorporates the corresponding effective local source/destination or endpoint fields defined by that GDP encoding. Local carriage MUST NOT omit GDP binding merely because the addresses or identifiers are shorter or implicit in the local format.
+- width: 8
+- polynomial: `0x07` (`x^8 + x^2 + x + 1`)
+- initial register: `0x00`
+- input/output reflection: no
+- final XOR: `0x00`
+- check value for ASCII `123456789`: `0xF4`
 
-Mutable hop-by-hop GDP state, such as Hop Limit, MUST NOT be included in the end-to-end CRC because routers legitimately change it in transit. The final pseudo-header field list for each GDP encoding must distinguish immutable/effective endpoint fields from mutable forwarding fields.
+### CRC-32-GNET
 
-A packet that fails GTS CRC validation is discarded and, for reliable delivery, is treated as not received. No positive acknowledgement may be generated from a packet that fails integrity validation.
+- width: 32
+- polynomial: `0x04C11DB7`
+- initial register: `0xFFFFFFFF`
+- input/output reflection: no
+- final XOR: `0xFFFFFFFF`
+- transmitted CRC byte order: most-significant byte first
+- check value for ASCII `123456789`: `0xFC891918`
 
-CRC provides accidental-error detection, not authentication or secrecy. Cryptographic protection remains outside the current baseline.
+These choices deliberately favor a simple MSB-first shift-register implementation appropriate to early hardware.
+
+### GDP pseudo-header binding
+
+The GTS CRC is calculated over a canonical end-to-end context followed by the complete GTS header and payload. For the traditional routed profile, the canonical GDP contribution is:
+
+```text
+GDP Version / protocol context
+GDP Size Class
+Effective Source Address      64 bits
+Effective Destination Address 64 bits
+[GDP Type, if retained in the final GDP header]
+GTS header
+GTS payload
+```
+
+The **effective** source and destination are the canonical 64-bit endpoint identities. If a local/compact GDP representation abbreviates an endpoint address on a particular link, that address is expanded to its effective 64-bit identity before CRC calculation. Thus changing between compact and full wire representations at a router does not change the end-to-end GTS CRC context.
+
+The local/global address-mode bits themselves are representation details and are not CRC input. Hop Limit is excluded because routers legitimately decrement it. Reserved bits and other mutable hop-local representation state are excluded.
+
+If the current GDP `Type` field remains as a next-protocol discriminator, its value MUST be included in the pseudo-header. If that field is removed from the initial GDP format, GTS uses a fixed protocol-domain constant instead. This one point remains tied to the pending GDP Type decision.
+
+A packet that fails GTS CRC validation is discarded and treated as not received. No positive acknowledgement may be generated from failed DATA.
+
+CRC provides accidental-error detection, not authentication or secrecy.
 
 ## Service selection
 
-GTS does not require TCP-style 16-bit source and destination ports. Transport identity and service identity are separate:
+GTS does not use TCP-style fixed 16-bit source and destination ports. Transport identity and service identity are separate:
 
 - Tunnel ID identifies an established transport association;
 - Stream ID identifies one flow within a tunnel;
@@ -55,22 +101,27 @@ The Service Selector begins with a 2-bit Size Class:
 | Size class | Selector field | Representation |
 |---:|---:|---|
 | 0 | 8 bits | numeric registered service code |
-| 1 | 32 bits | 4 ASCII characters |
-| 2 | 128 bits | 16 ASCII characters |
+| 1 | 32 bits | short fixed-width textual service selector |
+| 2 | 128 bits | long fixed-width textual/private selector |
 | 3 | reserved | future expansion |
 
-ASCII selector fields are fixed width. Shorter names are terminated and padded with zero bytes. The exact allowed character set and case-folding rules remain OPEN.
+The exact restricted character alphabet/packing for textual selectors remains open; the direction under discussion is a compact uppercase-letter/`-` grammar rather than unrestricted ASCII.
 
-The selector is carried only when selecting/opening a service, in CONNECT and/or STREAM_OPEN depending on the final state machine. Ordinary DATA packets do not repeat it.
+The selector is carried only during service setup. Ordinary DATA packets do not repeat it.
 
-Class 0 gives very small systems a compact public service namespace at only 10 logical bits: two class bits plus one service byte. The textual classes permit directly named services without imposing a global 16-bit port registry. The 128-bit class also provides a very large sparse namespace that can be used for private or opaque service names.
+Sparse long selectors can make exhaustive remote service scanning impractical, but this is not cryptographic protection. Predictable names remain guessable and passive observers can learn selectors from setup traffic.
 
-Sparse selectors can make exhaustive remote service scanning impractical without introducing cryptography. This property depends on the selector value being difficult to guess. Predictable textual names remain vulnerable to dictionary probing even when carried in a 128-bit field.
+Service enumeration is optional and belongs to higher-level discovery/directory facilities.
 
-The selector mechanism itself provides no secrecy or authentication. A passive observer can learn a selector that appears in setup traffic. Cryptographic protection is outside the current baseline.
+## Explicitly deferred from the initial profile
 
-Service enumeration is optional and belongs to higher-level discovery/directory facilities; GTS does not require a node to advertise every selector it accepts.
+The following are not required to finish the traditional packet-routed GTS baseline:
 
-A complete specification must still define connection establishment, collision handling, local and global identifiers, exact selector placement, stream open/accept, segmentation, sequence space, acknowledgments, receive-window units, retransmission timers, duplicate suppression, reset/release/rebind, keepalive, exact CRC algorithms, optional cryptographic binding, QoS/reservation requests, and path-change behavior.
+- flow-ID or virtual-circuit routed optimization;
+- multicast/group streams;
+- end-to-end congestion-control algorithm;
+- unreliable stream profiles;
+- cryptographic authentication/encryption;
+- dynamic route behavior.
 
-The historic CONNECT layouts are retained in [[GTS Transport Packets]], including their unresolved bit-count problems. They are input to the design, not yet normative encodings.
+The remaining initial-profile work is the exact GTS packet-type registry, CONNECT/STREAM_OPEN state machines, DATA and ACK layouts, packet sequence and acknowledgement rules, receive-credit encoding, retransmission timing, graceful close/reset behavior, and golden packet vectors.
