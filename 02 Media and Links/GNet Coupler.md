@@ -7,12 +7,12 @@ status: accepted
 layers: ["L1","L2"]
 tags: ["gnet","gnet/media","gnet/status/accepted","gnet/coupler"]
 parent: "[[Media and Links MOC]]"
-related: ["[[GNet Link Control Protocol]]","[[GNet PHY Profiles]]","[[Minimum GNet-3 NIC]]","[[GNet Switch]]"]
-updated: 2026-09-03
+related: ["[[GNet Link Control Protocol]]","[[GNet PHY Profiles]]","[[Minimum GNet-3 NIC]]","[[GNet Switch]]","[[GCTL Protocol]]"]
+updated: 2026-09-11
 ---
 # GNet Coupler
 
-Status: **ACCEPTED architecture; GC3-32 and exact fairness policy OPEN**
+Status: **ACCEPTED architecture; exact GC3 time quantum and GC3-32 economics OPEN**
 
 A **GNet Coupler (GC)** is the low-cost centrally arbitrated shared-medium GNet LAN device. The first product class is GNet-3:
 
@@ -25,50 +25,88 @@ GC3-16
 
 There is deliberately **no general-purpose GC10 LAN profile**. Sites needing more aggregate LAN capacity move to GS3; sites needing faster individual links move to GS10.
 
+## Architectural rule
+
+GC3 is **not a forwarding node and not a credit endpoint**. It maintains no GDP address table, no virtual-circuit table, no receiver-credit state, no packet buffer state and no per-flow scheduler state.
+
+GC3 does not parse GCTL, GDP destinations, GDP Size Class, credits or routing information. All attached receivers observe the shared data stream and decide locally whether a GDP packet is relevant to them.
+
+> **Credits are link-local between adjacent forwarding endpoints. GC3 is transparent to that relationship and does not participate in credits.**
+
+For example:
+
+```text
+A --- GC3 --- B
+
+A <--- link-local credits ---> B
+```
+
+and for routed traffic:
+
+```text
+A --- GC3 --- Router R --- ...
+
+A <--- link-local credits ---> R
+```
+
+The remote GDP destination may be globally distant; the credit relationship is only with the adjacent forwarding endpoint.
+
 ## Data path
 
-GC3 provides one shared 3 Mbit/s data resource. It does not need packet-store memory, a GDP route table, or a general-purpose routing CPU.
+GC3 provides one shared 3 Mbit/s data resource. At most one attached endpoint drives the shared transmit resource at a time. The selected endpoint's data is repeated to all attached receivers.
 
-It maintains only small active-flow state such as:
+GC3 requires no packet-store memory, GDP route table, destination lookup, VC allocation, credit table or general-purpose routing CPU.
 
-```text
-VCID
-source port
-priority
-reserved/available receiver credits
-sender remaining demand
-scheduler state
-```
+## WANT and PERMIT control pairs
 
-A Coupler's data path is shared: all attached endpoints observe a granted transfer and filter it by the GDP destination address. A Coupler therefore does not retain a GDP-address-to-port forwarding table. It acknowledges `ADDRESS_ANNOUNCE` for uniform client behavior but otherwise ignores it. The receiver reports real free capacity with `CREDIT`; the GC then schedules consumption of those credits with `GRANT`.
-
-The receiver decides what is safe; the GC decides what transmits now.
-
-## Scheduling quantum
-
-The baseline maximum NORMAL scheduling quantum is **8 flits**. This is a scheduling value, not a credit unit.
+On GC3 the two dedicated control directions are named by their state semantics rather than as a message protocol:
 
 ```text
-GNet-3: 8 × 32 / 3,000,000 ≈ 85.3 µs
+endpoint -> GC3   WANT
+GC3 -> endpoint   PERMIT
 ```
 
-The GC MAY grant fewer than eight flits when the packet has fewer remaining or when receiver credit is smaller.
+`WANT=1` continuously means that the endpoint requests ownership of the shared data resource.
 
-A REALTIME request does not revoke already granted flits. The GC finishes the current quantum, withholds the next NORMAL grant, services eligible REALTIME traffic on another VC, then resumes NORMAL traffic.
+`PERMIT=1` continuously means that the endpoint is currently allowed to drive the shared data resource.
 
-The exact anti-starvation budget for sustained REALTIME load remains OPEN.
+These are line states, not framed messages. GC3 does not send `REQUEST`, `GRANT`, `CREDIT`, `END` or other parsed runtime control messages.
+
+A GC3 may provide a fixed bootstrap signature so a NIC can distinguish GC3 from GS3. After GC3 identification, the control pair operates only as WANT/PERMIT state.
+
+## Arbitration and release handshake
+
+GC3 selects one requester using a simple fairness policy, initially round-robin.
+
+Ownership is time-bounded rather than packet-bounded because GDP package sizes differ substantially. The exact baseline time quantum remains OPEN and should be chosen so a typical small packet often fits in one turn while large packets naturally require multiple turns.
+
+When a quantum expires, GC3 deasserts `PERMIT`. The endpoint stops transmission at the defined physical boundary, then MUST deassert `WANT`, even if it still has queued data. Only after that release handshake and after the Coupler has moved on may the endpoint assert `WANT` again for another turn.
+
+The four-phase state sequence is therefore:
+
+```text
+WANT   rises
+PERMIT rises
+PERMIT falls
+WANT   falls
+```
+
+A large GDP transfer may be paused and resumed across multiple ownership quanta. The Coupler does not need to know where packet boundaries occur.
+
+## Credit and control traffic
+
+Credit control is carried on the normal data path as GCTL traffic, not on the GC3 WANT/PERMIT control pair.
+
+A node needing receive capacity from its adjacent forwarding endpoint sends `GCTL CREDIT_REQUEST`; the adjacent forwarding endpoint responds with `GCTL CREDIT`. Both are ordinary data-path control messages and consume GC3 medium time like other traffic.
+
+GC3 neither captures nor interprets these messages.
 
 ## Priority
 
-Minimum GC3 has exactly two priorities:
-
-- `NORMAL`
-- `REALTIME`
-
-REALTIME is reserved for short latency-sensitive traffic such as voice/control. It is not a generic bulk-traffic priority class.
+Minimum GC3 has one arbitration class. There is no GC3 `NORMAL`/`REALTIME` control-pair protocol in the baseline design. More sophisticated QoS is a Switch capability unless a later GC profile explicitly adds a simple physical arbitration extension.
 
 ## Package-size policy
 
-GC3 deliberately limits GDP package sizes. The current baseline profile permits classes **0 through 7** (up to `bulk1K`, 1,024 payload bytes) and rejects classes 8 through 15. REALTIME is legal only for classes **1 through 3** (`tiny3B`, `ctrl32B`, `ctrl64B`).
+GC3 fairness is time-based rather than package-size-based. A large GDP package therefore consumes multiple ownership turns rather than monopolizing the shared medium in one turn.
 
-This makes large/jumbo packages a switched/trunk capability rather than forcing the cheapest Coupler/NIC combination to provision for them.
+Any package-size restriction on GC3 should derive from endpoint buffer/PHY limits, not from Coupler scheduler state.
