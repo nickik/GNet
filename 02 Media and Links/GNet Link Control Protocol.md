@@ -7,116 +7,105 @@ status: mixed
 layers: ["L1","L2"]
 tags: ["gnet","gnet/protocol","gnet/status/mixed","gnet/layer/l1","gnet/layer/l2"]
 parent: "[[Media and Links MOC]]"
-related: ["[[GNet PHY Profiles]]","[[GNet Coupler]]","[[GNet Switch]]","[[Minimum GNet-3 NIC]]","[[GLCP Control Flits]]"]
-updated: 2026-09-06
+related: ["[[GNet PHY Profiles]]","[[GNet Coupler]]","[[GNet Switch]]","[[Minimum GNet-3 NIC]]","[[GCTL Protocol]]"]
+updated: 2026-09-11
 ---
 # GNet Link Control Protocol (GLCP)
 
-Status: **GNet 0.1 HELLO/CAPABILITIES encoding accepted; remaining operations and electrical line code draft**
+Status: **UNDER REVISION — bootstrap/capability functions retained; runtime credit/grant model superseded**
 
-GLCP is the hop-local control protocol used by native GNet links. On GNet-3 and GNet-10 copper it runs full-duplex on the dedicated CONTROL-UP and CONTROL-DOWN pairs while data uses DATA-UP and DATA-DOWN.
+GLCP is the directly attached infrastructure-control mechanism used by native GNet links. On GNet-3 and GNet-10 copper, dedicated control pairs exist alongside the data pairs.
 
-GLCP is not GDP. It never becomes a routed packet merely to perform local flow control.
+The control pair is for functions meaningful to the **immediately attached infrastructure**. It is not the carriage mechanism for node-to-node credit control.
+
+## Architectural separation
+
+The following distinction is now normative:
+
+- **GCTL CREDIT_REQUEST / CREDIT** are carried on the normal data path.
+- **Credits are strictly link-local** between adjacent forwarding endpoints.
+- **GC3 is not a forwarding endpoint** and does not participate in credit state.
+- **GS3 is a forwarding endpoint**; its ingress and egress credit relationships are independent.
+- Physical medium/path permission is distinct from receiver credit.
+
+A credit therefore never means permission to use a shared medium or switch path at this instant.
+
+## GC3 control-pair mode
+
+After a NIC identifies that it is attached to GC3, the dedicated control pair ceases to be a parsed message channel and operates as two continuous line states:
+
+```text
+endpoint -> GC3   WANT
+GC3 -> endpoint   PERMIT
+```
+
+`WANT=1` means the endpoint requests ownership of the shared data medium.
+
+`PERMIT=1` means the endpoint may currently drive the shared data medium.
+
+GC3 runtime has no GLCP `REQUEST`, `CREDIT`, `GRANT`, `END`, VC allocation or per-flow control messages.
+
+A fixed bootstrap response/signature MAY be used so a NIC can distinguish a GC3 from a GS3 without requiring a general-purpose parser in the Coupler.
+
+## GS3 control-pair mode
+
+GS3 remains an active switch and therefore may require directly attached control functions that GC3 does not. The exact minimum GS3 control-pair operation set remains under review.
+
+Candidate infrastructure-local responsibilities include:
+
+- presence / link synchronization;
+- identifying the attached device as GS rather than GC;
+- capability and data-rate negotiation;
+- reset / physical error recovery;
+- destination/path setup where required for switched forwarding;
+- local transmit/path permission.
+
+Receiver credit is explicitly **not** one of these control-pair responsibilities.
+
+## Credit control
+
+The old GLCP `CREDIT` and infrastructure `GRANT` model is superseded.
+
+> **1 GNet credit = guaranteed receive capacity for exactly one physical flit at the next forwarding endpoint on the current link.**
+
+Credit exchange uses GCTL on the data path:
+
+```text
+GCTL CREDIT_REQUEST
+GCTL CREDIT
+```
+
+On GC3 these messages pass transparently between attached forwarding endpoints. On GS3 a credit request for the source-to-switch link is consumed by GS3, and GS3 replies from its own ingress capacity. GS3's downstream credit relationship is independent.
 
 ## Bootstrap responsibilities
 
-GLCP provides:
+Before the GC3/GS3 role is known, a minimal common bootstrap may provide:
 
-- link synchronization and HELLO/presence;
-- mandatory Minimum GNet-3 compatibility establishment;
-- capability advertisement and selection;
-- data-rate and mode selection;
-- reset and error recovery;
-- link status.
+- link synchronization / presence;
+- infrastructure-type identification;
+- Minimum GNet-3 compatibility establishment;
+- capability advertisement where applicable.
 
-Every advanced NIC begins in the Minimum GNet-3 compatibility mechanism. GNet-10, GNet-20, VC4, larger buffers, and other features are enabled only after both sides agree.
+Advanced modes such as GNet-10 may then negotiate additional physical capabilities on GS-class links.
 
-## Runtime operations
+The exact common bootstrap encoding remains open to revision so that GC3 can implement its response as fixed-function logic rather than as a general runtime control protocol.
 
-The baseline semantic operations are:
+## Removed runtime operations
 
-| Operation | Purpose |
-|---|---|
-| `REQUEST` | sender asks to begin/continue a transfer and identifies local destination, GDP Size Class, and priority |
-| `CREDIT` | receiver advertises guaranteed free capacity in physical flits |
-| `GRANT` | infrastructure gives the sender permission to consume some reserved credits now and identifies the VC |
-| `ADDRESS_ANNOUNCE` / `ADDRESS_ANNOUNCE_ACK` | client announces a usable GDP address; infrastructure confirms receipt/attachment handling |
-| `END` | complete/release transfer and VC state |
-| `ABORT` | cancel an active allocation |
-| `RESET` | discard link-local control/VC state and restart baseline negotiation; its 0.1 encoding is defined in [[GLCP Control Flits]] |
-
-Minimum GC request semantics are:
+The following earlier GLCP runtime operations are no longer baseline link-control operations:
 
 ```text
-REQUEST {
-    destination     local attachment / next-hop GDP destination
-    traffic_class   NORMAL, REALTIME, CONTROL, or BULK
-}
+CREDIT
+GRANT
+END as credit/allocation release
+GC3 REQUEST carrying destination/traffic class
+GC3 VC allocation
 ```
 
-`destination` is used by the first Switch/Coupler hop. Once a Switch has selected the destination port, it does not need to forward the original destination field to that client; the downstream request is local to that next hop.
+Existing numeric layouts for those operations are historical and must not be treated as current GNet 0.1 requirements.
 
-## CREDIT versus GRANT
+## Design rule
 
-These are deliberately different resources:
+A useful boundary for future revisions is:
 
-> **1 CREDIT = guaranteed downstream receive capacity for exactly one physical flit.**
-
-A receiver may return credit in batches such as `+4`, `+8`, or `+16`; accounting remains exact to one flit.
-
-A GRANT is scheduler permission to transmit now. Infrastructure MUST obey:
-
-```text
-GRANT <= min(
-    sender remaining demand,
-    downstream reserved credits,
-    scheduling allowance
-)
-```
-
-A granted/reserved credit cannot be granted again until the receiver returns it or link recovery cancels the reservation.
-
-## GNet 0.1 bootstrap control flits
-
-[[GLCP Control Flits]] defines the accepted 32-bit logical control-flit layouts for `HELLO` and `CAPABILITIES`, including their generation checks and client-to-infrastructure negotiation sequence. The client begins a newly present link with `HELLO(initial)`; the infrastructure is the selecting authority for its physical port.
-
-## Control timing and remaining encoding work
-
-The current engineering target is approximately **1 Mbit/s logical control signaling per direction** on the dedicated control pairs. A 32-bit logical control flit occupies about 32 microseconds before line-code overhead.
-
-## GNet 0.1 request and credit encoding
-
-The first credit-control profile freezes the `REQUEST` header and `CREDIT` as
-32-bit GLCP control flits. A complete `REQUEST` is three consecutive flits:
-the header followed by the two 32-bit words of its GDP destination address.
-`REQUEST` carries the canonical `traffic-class:8`; package size is learned
-from the GDP header once transmission begins and is not duplicated in the
-request.
-
-```text
-REQUEST header: opcode:4 | version:4 | sender-generation:6 | request-id:6 |
-                traffic-class:8 | reserved:4
-REQUEST destination: address[63:32] | address[31:0]
-CREDIT:  opcode:4 | version:4 | sender-generation:6 | request-id:6 |
-          credit-count:8 | reserved:4
-GRANT:   opcode:4 | version:4 | sender-generation:6 | request-id:6 |
-          vcid:2 | reserved:10
-END:     opcode:4 | version:4 | sender-generation:6 | request-id:6 |
-          reserved:12
-ABORT:   opcode:4 | version:4 | sender-generation:6 | request-id:6 |
-          reason:4 | reserved:8
-```
-
-Traffic classes are `0x00 NORMAL`, `0x01 REALTIME`, `0x02 CONTROL`, and
-`0x03 BULK`. Values `0x04–0xFF` are reserved in 0.1. One credit guarantees
-capacity for exactly one physical VC2 flit. A Switch may return a bounded
-credit response for an accepted request; credit is capacity, not permission to
-transmit. `GRANT` authorizes the sender to consume its currently outstanding
-credits on `vcid`; it carries no duplicate flit count. The sender must not
-transmit beyond its current credit balance. `END` completes the package after
-all required grants and data have been sent; a `GRANT` is not an implicit end
-marker.
-
-`HELLO`, `CAPABILITIES`, `REQUEST`, `CREDIT`, `GRANT`, `END`, and `ABORT` have accepted GNet 0.1 opcode/layout definitions. `ABORT` reasons are `0x0 SENDER_ABORT`, `0x1 TIMEOUT`, `0x2 PROTOCOL_ERROR`, and `0x3 RESOURCE_ERROR`; `0x4–0xF` are reserved. Serialization, exact line code, and the encodings of the remaining operations are **DRAFT — requires PHY validation**. Manchester/biphase-style self-clocking encoding is a historically plausible candidate, not a frozen requirement.
-
-GNet-20 moves these semantics in-band after a negotiated mode transition; its reserved control-symbol/flit encoding remains open.
+> If an operation expresses communication or receive state of a remote/adjacent GNet forwarding endpoint, carry it on the data path. If it exists only so the directly attached Coupler/Switch can operate the physical attachment or switching fabric, it may belong on the control pair.
