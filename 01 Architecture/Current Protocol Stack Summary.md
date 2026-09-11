@@ -7,7 +7,7 @@ layers: ["L1","L2","L3","L4","L5"]
 tags: ["gnet","gnet/architecture","gnet/status/active"]
 parent: "[[GNet Architecture Overview]]"
 related: ["[[GNet PHY Profiles]]","[[GNet Link Control Protocol]]","[[Direct Link Protocol]]","[[GDP Datagram]]"]
-updated: 2026-09-03
+updated: 2026-09-11
 ---
 # Current protocol stack summary
 
@@ -25,16 +25,19 @@ updated: 2026-09-03
 
 - Minimal hop-local data transfer.
 - First flit on an inactive allocated VC starts the segment.
-- Hop-local integrity belongs here; exact CRC packing remains draft.
+- No periodic DLP payload-integrity window is defined by the current baseline.
 - No separate current DLP size-class registry.
 
 ## GDP
 
 - Routed L3 package.
-- 64-bit Source and Destination.
-- Version, Type, Size Class, Hop Limit, QoS.
+- Global form: 64-bit Destination and Source; 5-flit fixed header; 8-bit Hop Limit.
+- Local form: 16-bit Destination and Source IDs; 2-flit fixed header; 4-bit Hop Limit.
+- Version 2 bits, Type 4 bits, Size Class 4 bits, Address Form 1 bit.
+- CRC-8 occupies bits 15..8 of Flit 1 in both forms and protects Version, Type, Size Class, Address Form, Destination, and Source.
+- Hop Limit, Reserved bits, and payload are not covered by the GDP CRC.
 - Existing 16-value GDP package-size registry.
-- No GDP checksum, CRC, Flow Control ID, session state, receive window, or fragmentation state.
+- No GDP payload checksum, Flow Control ID, session state, receive window, or fragmentation state.
 
 ## LAN products/profiles
 
@@ -48,4 +51,4 @@ No normal GC10 exists.
 
 ## Higher layers
 
-GTS and application protocols own transport/session reliability, end-to-end integrity, tunneling, streams, security, and application semantics.
+GTS and application protocols own transport/session reliability, end-to-end payload integrity, tunneling, streams, security, and application semantics.
