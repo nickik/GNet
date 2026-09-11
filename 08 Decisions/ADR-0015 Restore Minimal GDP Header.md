@@ -3,20 +3,20 @@ id: adr-0015-restore-minimal-gdp-header
 title: "ADR-0015 Restore Minimal GDP Header"
 aliases: ["Decision 0015","GDP no checksum restored"]
 type: decision
-status: accepted
+status: superseded
 layers: ["L3"]
-tags: ["gnet","gnet/decision","gnet/status/accepted","gnet/layer/l3"]
+tags: ["gnet","gnet/decision","gnet/status/superseded","gnet/layer/l3"]
 parent: "[[Decisions MOC]]"
-related: ["[[GDP Protocol]]","[[GDP Datagram]]","[[ADR-0002 Minimal GDP Header]]","[[ADR-0009 No GDP Integrity Field]]"]
-updated: 2026-09-03
+related: ["[[GDP Protocol]]","[[GDP Datagram]]","[[ADR-0002 Minimal GDP Header]]","[[ADR-0009 No GDP Integrity Field]]","[[ADR-0018 GDP Header CRC and Local 16-bit Form]]"]
+updated: 2026-09-11
 ---
-# Decision 0015: Restore the minimal GDP header
+# Decision 0015: Restore the minimal GDP header — historical record
 
-Status: **ACCEPTED 2026-09-03**
+Status: **SUPERSEDED by [[ADR-0018 GDP Header CRC and Local 16-bit Form]]**
 
-An intermediate draft added an 8-bit GDP header checksum and a 16-bit Flow Control ID. Both are removed.
+This ADR records the accepted 2026-09-03 state. An intermediate draft had added an 8-bit GDP header checksum and a 16-bit Flow Control ID; ADR-0015 removed both at that time.
 
-GDP semantic fields are limited to:
+GDP semantic fields were then limited to:
 
 ```text
 Version
@@ -28,17 +28,17 @@ QoS
 64-bit Source
 ```
 
-Reserved wire padding may exist but carries no protocol semantics.
+Reserved wire padding could exist but carried no protocol semantics.
 
-The current encoding candidate places Destination before Source, allowing a forwarding node to begin output selection before it has received the source address.
+The encoding candidate placed Destination before Source, allowing a forwarding node to begin output selection before it had received the source address.
 
-GDP MUST NOT contain checksum/CRC/integrity, link credit state, Flow Control ID, receive window, session identity, fragmentation state, or options.
+ADR-0015 required GDP to contain no checksum/CRC/integrity, link credit state, Flow Control ID, receive window, session identity, fragmentation state, or options.
 
-Rationale:
+Rationale at the time:
 
-- DLP already owns hop-local integrity;
-- GLCP/DLP own receiver credits and transmission grants;
-- GTS/higher layers own transport/session flow state and end-to-end integrity;
-- keeping these out of GDP preserves a small router fast path and clean layering.
+- DLP was expected to own hop-local integrity;
+- GLCP/DLP owned receiver credits and transmission grants;
+- GTS/higher layers owned transport/session flow state and end-to-end integrity;
+- keeping these out of GDP preserved a small router fast path and clean layering.
 
-The existing four-bit GDP Size Class remains because it is package sizing/routing-profile metadata rather than transport flow state.
+[[ADR-0018 GDP Header CRC and Local 16-bit Form]] supersedes only the relevant current GDP-header outcome: GDP now carries a small header-only CRC-8, Version is 2 bits, Local addresses are 16 bits, and the exact Local/Global fixed-header packing is frozen. GDP still carries no payload-integrity field, Flow Control ID, fragmentation state, receive window, session identity, or options.
