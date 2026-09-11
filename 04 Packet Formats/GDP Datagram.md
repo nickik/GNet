@@ -133,7 +133,7 @@ For a GDP header, the CRC input is the following canonical bitstream with no pad
 Version | Type | Size Class | Address Form | Destination | Source
 ```
 
-Each field is processed most-significant bit first. Destination and Source are 64 bits each in Global form and 16 bits each in Local form.
+Each field is processed most-significant bit first. For the multi-byte Destination and Source fields, bytes are processed in transmitted order, most-significant byte first, and each byte is processed bit 7 first through bit 0. Destination and Source are 64 bits each in Global form and 16 bits each in Local form.
 
 The CRC explicitly excludes:
 
