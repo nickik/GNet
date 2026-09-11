@@ -7,7 +7,7 @@ status: mixed
 tags: ["gnet","gnet/meta","gnet/status/mixed"]
 parent: "[[GNet Home]]"
 related: ["[[Open Questions]]","[[GNet Architecture Overview]]","[[Decisions MOC]]"]
-updated: 2026-09-03
+updated: 2026-09-11
 ---
 # Specification status
 
@@ -29,10 +29,11 @@ This repository is the canonical working specification for GNet. It is coherent 
 - Minimum GNet-3 priority has exactly `NORMAL` and `REALTIME`.
 - GC3 is the low-cost shared 3 Mbit/s Coupler; GS3 is switched 3 Mbit/s; GS10 provides independently negotiated 3/10 Mbit/s switched ports.
 - There is no normal general-purpose GC10 LAN profile.
-- GDP semantic fields are Version, Type, Size Class, Hop Limit, QoS, 64-bit Source, and 64-bit Destination.
-- GDP contains no checksum, CRC, Flow Control ID, receive window, session ID, fragmentation state, or options.
-- GDP uses the existing four-bit package-size registry from empty through 1 MiB jumbogram; link profiles may restrict usable classes.
-- Hop-local accidental-error detection belongs to DLP; end-to-end integrity belongs above GDP.
+- GDP uses 2-bit Version, 4-bit Type, 4-bit Size Class, one Address Form bit, and header-only CRC-8. Global form has 64-bit Destination and Source with an 8-bit Hop Limit; Local form has 16-bit Destination and Source IDs with a 4-bit Hop Limit.
+- GDP CRC-8 protects Version, Type, Size Class, Address Form, Destination, and Source. Hop Limit, Reserved bits, and payload are not covered.
+- GDP contains no payload checksum, Flow Control ID, receive window, session ID, fragmentation state, options, or QoS field.
+- GDP uses the frozen 16-value package-size registry from 0 bytes through 8192 bytes; link profiles may restrict usable classes.
+- The current baseline does not define periodic DLP payload-integrity windows. End-to-end payload integrity belongs above GDP.
 - GNet uses hierarchical global addresses and does not depend on Ethernet MAC learning, collision domains, or NAT.
 - `FE80::/16` is the reserved non-routable link-local GDP prefix; clients generate their own 48-bit suffixes.
 
@@ -53,13 +54,12 @@ GNET-A remains a separate centrally scheduled residential-access family. GNET-P 
 
 ## DRAFT / validation items
 
-- Exact DLP CRC algorithm and trailer packing.
+- GDP invalid-header resynchronization when Size Class itself cannot be trusted; the specification must establish the next trustworthy GDP boundary without inventing periodic DLP CRC windows.
 - GLCP encodings for RELEASE/ABORT, control serialization, and electrical line code.
 - Exact electrical limits, attenuation/crosstalk masks, reach, termination, isolation, and connector pinout for each copper grade.
 - GC3-32 feasibility/economics and exact sustained-REALTIME anti-starvation rule.
 - GNet-20 bonded-lane/in-band-control encoding.
 - Final GNET-P control/framing and commercial name separation from LAN GNet-10.
-- GDP Version/Type/QoS allocations and final validation of the 20-octet packing.
 - GCTL bootstrap addressing/encodings and full routing protocol.
 - GTS transport algorithms and application protocols.
 
