@@ -26,7 +26,7 @@ Application/service
                 -> 34-bit physical flits
 ```
 
-The baseline physical flit is exactly 34 bits: a 2-bit hop-local VCID plus 32 carried bits. There is no SOF bit.
+The baseline physical flit is exactly 34 bits: a 2-bit hop-local VCID plus 32 carried bits. There is no SOF bit. The first data flit on an inactive allocated VC begins the DLP segment implicitly.
 
 ## Layer 1 — media and link control
 
@@ -44,27 +44,27 @@ GNET-A remains the residential shared-access family. GNET-P remains a distinct p
 
 ## Layer 2 — Direct Link Protocol
 
-DLP supplies the minimal hop-local data-path contract, VC state, and protocol adaptation. It has no global source/destination address or end-to-end session state. The current baseline does not define periodic DLP payload-integrity windows.
+DLP supplies hop-local bounded transfer, VC state, and protocol adaptation. It has no global source/destination address or end-to-end session state. The current baseline does not define periodic DLP payload-integrity windows.
 
 Native GNet receiver flow control is credit based:
 
 > **1 credit = guaranteed downstream receive capacity for one physical flit.**
 
-Infrastructure scheduling permission is separate from receiver capacity. Couplers arbitrate shared media; switches propagate path availability through independent outputs and favor wormhole/cut-through forwarding with small buffers.
+Infrastructure scheduling permission is a separate GRANT. Couplers arbitrate one shared medium; switches propagate credits/path availability through independent outputs and favor wormhole/cut-through forwarding with small buffers.
 
 ## Layer 3 — GDP
 
-GDP is the common routed datagram/package. The initial fixed header uses 2-bit Version, 4-bit Type, 4-bit Size Class, a Local/Global Address Form bit, Destination before Source, and a header-only CRC-8. Global addresses are 64 bits each; Local identifiers are 16 bits each.
+GDP is the common routed datagram/package. Its initial fixed header contains 2-bit Version, 4-bit Type, 4-bit Size Class, one Local/Global Address Form bit, Destination before Source, and a header-only CRC-8. Global addresses are 64 bits each; Local identifiers are 16 bits each.
 
-Global GDP uses an 8-bit Hop Limit and a five-flit fixed header. Local GDP uses a 4-bit Hop Limit and a two-flit fixed header.
+Global GDP uses an 8-bit Hop Limit and five-flit fixed header. Local GDP uses a 4-bit Hop Limit and two-flit fixed header. GDP CRC-8 protects Version, Type, Size Class, Address Form, Destination, and Source; it excludes Hop Limit, currently Reserved bits, and payload.
 
-GDP CRC-8 protects immutable header information required for interpretation and routing. It does not cover Hop Limit, currently Reserved bits, or the payload. GDP therefore provides no payload-integrity guarantee; end-to-end payload integrity remains the responsibility of GTS or another higher layer.
+GDP therefore provides no payload-integrity guarantee. End-to-end payload integrity and reliability belong to GTS or another protocol above GDP.
 
 Routing uses hierarchical prefixes. A dedicated DEC router is an optimized product, but routing is a protocol capability: any capable GNet host may advertise delegated/reachable prefixes when authorized by routing policy.
 
 ## Higher layers
 
-GTS and application protocols own tunnels, reliability, sequencing, end-to-end payload integrity, sessions, security, service selection, directory use, terminal service, RPC, files, voice, and other application semantics.
+GTS and application protocols own tunnels, reliability, sequencing, end-to-end integrity, sessions, security, service selection, directory use, terminal service, RPC, files, voice, and other application semantics.
 
 ## Implementation boundary
 
