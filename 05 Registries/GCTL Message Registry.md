@@ -6,8 +6,8 @@ type: registry
 status: draft
 tags: ["gnet","gnet/registry","gnet/status/draft"]
 parent: "[[Registries MOC]]"
-related: ["[[GCTL Protocol]]","[[Discovery Packets]]","[[Address Configuration Packets]]"]
-updated: 2026-09-07
+related: ["[[GCTL Protocol]]","[[Discovery Packets]]","[[Address Configuration Packets]]","[[GNet Link Control Protocol]]"]
+updated: 2026-09-11
 ---
 # GCTL message registry
 
@@ -16,7 +16,7 @@ updated: 2026-09-07
 
 Status: **DRAFT allocations**
 
-GCTL is the suite name. GCMP is the routed control-message wire protocol defined by [[GCTL Protocol]].
+GCTL is the suite name. GCMP is the control-message wire protocol carried on the normal GNet data path.
 
 ## Message types
 
@@ -25,6 +25,9 @@ GCTL is the suite name. GCMP is the routed control-message wire protocol defined
 | `0x00` | RESERVED | invalid/unassigned |
 | `0x01` | SOLICIT | scoped service/router discovery |
 | `0x02` | ADVERTISE | discovery response |
+| `0x03` | CREDIT_REQUEST | request link-local receive credit from the adjacent forwarding endpoint |
+| `0x04` | CREDIT | advertise link-local receive capacity to the adjacent forwarding endpoint |
+| `0x05..0x0F` | Reserved | future bootstrap/link-adjacent control |
 | `0x10` | ADDRESS_OFFER | bootstrap address offer |
 | `0x11` | ADDRESS_CLAIM | client claims offered address |
 | `0x12` | ADDRESS_ACK | claim accepted |
@@ -50,6 +53,20 @@ GCTL is the suite name. GCMP is the routed control-message wire protocol defined
 | `0x80..0x9F` | ROUTING CONTROL | reserved for route-distribution protocol(s) |
 | `0xA0..0xFE` | Reserved | future standard/extension allocation |
 | `0xFF` | EXPERIMENTAL | controlled experiments |
+
+## Credit-control semantics
+
+`CREDIT_REQUEST` and `CREDIT` are carried on the normal data path on both GC3 and GS3. They are not GLCP control-pair operations.
+
+Credits are strictly link-local:
+
+> **1 credit = guaranteed receive capacity for exactly one physical flit at the next forwarding endpoint on the current link.**
+
+A GC3 Coupler does not consume these messages or hold credit state. On a shared GC3 medium, the adjacent endpoint or local router responds.
+
+A GS3 is an active forwarding endpoint. It consumes a `CREDIT_REQUEST` for its ingress relationship and responds with `CREDIT` representing its own receive capacity. The GS3-to-egress credit relationship is independent.
+
+Exact compact field encoding and batching limits for `CREDIT_REQUEST` / `CREDIT` remain DRAFT.
 
 ## DESTINATION_UNREACHABLE codes
 
