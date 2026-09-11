@@ -7,14 +7,16 @@ status: mixed
 layers: ["L2"]
 tags: ["gnet","gnet/protocol","gnet/status/mixed","gnet/layer/l2"]
 parent: "[[Media and Links MOC]]"
-related: ["[[34-bit Flit Format]]","[[GDP Datagram]]","[[Virtual Channels and VCIDs]]","[[GNet Link Control Protocol]]"]
-updated: 2026-09-03
+related: ["[[34-bit Flit Format]]","[[GDP Datagram]]","[[Virtual Channels and VCIDs]]","[[GNet Link Control Protocol]]","[[GCTL Protocol]]"]
+updated: 2026-09-11
 ---
 # Direct Link Protocol (DLP)
 
 Status: **ACCEPTED boundary and segment model; DRAFT integrity encoding**
 
-DLP is the minimal Layer-2 data-path contract for one GNet hop. It deliberately avoids global addressing, sessions, routing policy, user identity, and application semantics.
+DLP is the minimal Layer-2 data-path contract for one GNet hop. It deliberately avoids global addressing, sessions, routing policy, user identity and application semantics.
+
+DLP also contains **no local addressing field**. Native GNet addressing remains in GDP.
 
 ## Baseline flit
 
@@ -26,27 +28,37 @@ Every baseline data flit is:
 
 There is no SOF field and no first-flit Frame Type field.
 
-The infrastructure allocates a hop-local VC before data is sent. The first data flit received on an inactive allocated VC starts the segment implicitly. The receiver maintains the segment context until the known segment length completes or the VC is aborted, times out, or the link resets.
+The exact VC allocation rules are link-profile dependent and remain under revision for GC3 versus GS3. A GC3 Coupler itself does not allocate or interpret VCs.
 
 ## Segment length
 
-Native GNet data segments carry GDP. The GDP Size Class identifies the exact payload budget, allowing the receiver and forwarding infrastructure to determine the expected bounded transfer without adding a second DLP size-class system.
+Native GNet data segments carry GDP. The GDP Size Class identifies the exact payload budget, allowing receivers and forwarding infrastructure that participate in forwarding to determine the expected bounded transfer without adding a second DLP size-class system.
 
 DLP does **not** define the superseded 64/256/1024-byte Segment Class field. See [[DLP Segment Size Classes]] for historical context and [[GDP Datagram]] for current package-size classes.
 
-Adaptation profiles that carry a non-GDP protocol directly over DLP MUST define an equivalent bounded-length binding before using a VC.
+Adaptation profiles that carry a non-GDP protocol directly over DLP MUST define an equivalent bounded-length binding.
 
 ## Link control separation
 
-On GNet-3 and GNet-10 copper, [[GNet Link Control Protocol|GLCP]] runs on the dedicated CONTROL-UP and CONTROL-DOWN pairs. GLCP performs bootstrap, capability negotiation, VC allocation, REQUEST, CREDIT, GRANT, release, abort, reset, and link status. These operations are not GDP packets and do not consume data flits.
+Dedicated physical control pairs are infrastructure-local and are defined by [[GNet Link Control Protocol]].
+
+For GC3 they operate as continuous `WANT` / `PERMIT` states after bootstrap. Receiver credit exchange is not carried on the GC3 control pair.
+
+For GS3 the exact remaining control-pair operation set is under review, but receiver credit is likewise not a control-pair operation.
 
 ## Flow control
 
-DLP data transmission obeys actual receiver credits:
+> **1 GNet credit = guaranteed receive capacity for exactly one physical flit at the next forwarding endpoint on the current link.**
 
-> **1 GNet credit = guaranteed downstream receive capacity for exactly one physical flit.**
+Credits are strictly link-local, never end-to-end across the routed network.
 
-Credit is not permission to transmit immediately. Infrastructure issues a separate GRANT to schedule when some reserved credit may be consumed. See [[GNet Link Control Protocol]], [[GNet Coupler]], and [[GNet Switch]].
+A GC3 Coupler is not a forwarding endpoint and therefore does not terminate or maintain credits. Two endpoints communicating across GC3 exchange link-local credits with each other; for routed traffic, the local router is the adjacent forwarding endpoint.
+
+A GS3 is an active forwarding endpoint. Its ingress and egress credit relationships are independent; the source-to-GS credit balance is not a mirror of the downstream destination's balance.
+
+Credit solicitation and return use `GCTL CREDIT_REQUEST` and `GCTL CREDIT` on the normal data path.
+
+Credit is receive capacity, not instantaneous permission to use a medium or switch path. GC3 medium permission is expressed separately by `WANT` / `PERMIT`; GS3 path scheduling is likewise separate from credit semantics.
 
 ## Integrity
 
@@ -56,6 +68,6 @@ GDP has no checksum or integrity field. End-to-end integrity and reliability bel
 
 ## Link semantics
 
-DLP assumes direct adjacency or a centrally controlled local medium. Local physical identity comes from the actual switch/coupler/router port or medium-supplied channel. DLP therefore has no Ethernet-style MAC source/destination address fields.
+DLP assumes direct adjacency or a centrally controlled local medium. It does not introduce Ethernet-style MAC source/destination address fields.
 
-VCID state is hop-local and is terminated or reassigned at forwarding nodes.
+On GC3, the shared medium exposes transmitted GDP traffic to all attached receivers; GDP destination semantics determine which nodes or routers consume the packet.
