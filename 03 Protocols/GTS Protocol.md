@@ -7,8 +7,8 @@ status: frozen
 layers: ["L4","L5"]
 tags: ["gnet","gnet/protocol","gnet/status/frozen","gnet/layer/l4","gnet/layer/l5"]
 parent: "[[Protocols MOC]]"
-related: ["[[GTS Transport Packets]]","[[Transport and Flows]]","[[ADR-0005 Tunnels and Streams]]","[[ADR-0009 No GDP Integrity Field]]"]
-updated: 2026-09-10
+related: ["[[GTS Transport Packets]]","[[Transport and Flows]]","[[ADR-0005 Tunnels and Streams]]","[[ADR-0018 GDP Header CRC and Local 16-bit Form]]"]
+updated: 2026-09-11
 ---
 # GNet Transport and Session Protocol (GTS)
 
@@ -211,7 +211,7 @@ Retired Tunnel IDs and Stream IDs are not immediately reused. Implementations re
 
 ## End-to-end integrity
 
-GDP has no checksum/CRC, so GTS provides mandatory end-to-end integrity. Ordinary GTS uses CRC-32-GNET; a future compact form using the dedicated 0-byte/3-byte GDP classes uses CRC-8-GNET.
+GDP protects only its own immutable header information with CRC-8; it does not protect the GDP payload. GTS therefore provides mandatory end-to-end integrity for GTS content. Ordinary GTS uses CRC-32-GNET; a future compact form using the dedicated 0-byte/3-byte GDP classes uses CRC-8-GNET.
 
 CRC-8-GNET: polynomial `0x07`, init `0x00`, no reflection, xorout `0x00`, check `123456789 -> 0xF4`.
 
