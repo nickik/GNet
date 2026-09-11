@@ -7,7 +7,7 @@ status: active
 tags: ["gnet","gnet/moc","gnet/decision","gnet/status/active"]
 parent: "[[GNet Home]]"
 related: ["[[Architecture MOC]]","[[Open Questions]]"]
-updated: 2026-09-03
+updated: 2026-09-11
 ---
 # Decisions map of content
 
@@ -24,12 +24,14 @@ updated: 2026-09-03
 - [[ADR-0012 Minimum GNet-3 Compatibility Profile]]
 - [[ADR-0013 Receiver Credits and Infrastructure Grants]]
 - [[ADR-0014 GC3 GS3 GS10 LAN Ladder]]
-- [[ADR-0015 Restore Minimal GDP Header]]
+- [[ADR-0016 Access and Carrier Profile Naming]]
+- [[ADR-0018 GDP Header CRC and Local 16-bit Form]]
 
 ## Superseded/history retained
 
 - [[ADR-0008 VCID in Every Flit]] — field allocation superseded by ADR-0011.
-- [[ADR-0009 No GDP Integrity Field]] — historical path; no-checksum outcome restored by ADR-0015.
+- [[ADR-0009 No GDP Integrity Field]] — historical no-GDP-integrity decision; later restored by ADR-0015 and superseded by ADR-0018.
 - [[ADR-0010 DLP Segment Size Classes]] — DLP size classes replaced by GDP Size Class.
+- [[ADR-0015 Restore Minimal GDP Header]] — no-GDP-CRC header outcome superseded by ADR-0018.
 
 Create a superseding ADR rather than silently rewriting an accepted architectural choice.
