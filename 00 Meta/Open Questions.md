@@ -7,7 +7,7 @@ status: open
 tags: ["gnet","gnet/backlog","gnet/status/open"]
 parent: "[[GNet Home]]"
 related: ["[[Specification Status]]","[[Decisions MOC]]"]
-updated: 2026-09-03
+updated: 2026-09-11
 ---
 # Open questions and specification backlog
 
@@ -15,17 +15,17 @@ Priority meanings: **P0** blocks interoperable native-link prototypes; **P1** bl
 
 ## P0 — native-link interoperability
 
-1. **DLP integrity:** freeze CRC width/polynomial, initialization/reflection, trailer packing, final partial carried-region handling, and CRC-failure recovery.
+1. **Invalid GDP header resynchronization:** define how a receiver establishes the next trustworthy GDP packet boundary after a header CRC failure when the corrupted Size Class cannot be trusted. Do not assume following carried bits are a new GDP header.
 2. **GLCP wire encoding:** HELLO, CAPABILITIES, RESET, REQUEST, CREDIT, and GRANT are assigned for 0.1; assign RELEASE/ABORT and validate control serialization against the current ~1 Mbit/s target.
 3. **Copper electrical spec:** freeze differential levels, impedance/termination, isolation, line code, clock recovery, attenuation/crosstalk/noise masks, reach qualification, and failure detection.
 4. **GMC-8:** freeze pair-to-pin mapping, mechanical dimensions/keying, contact/shield rules, latch protection, and installation tooling.
 5. **GC3 conformance:** validate 8-flit NORMAL scheduling quantum, exact REALTIME anti-starvation rule, timeout/recovery, and the current class-0..7 / realtime-1..3 package policy.
 6. **VC state machine:** freeze allocation/reuse, timeout, abort/reset, stale-credit recovery, and malformed/early/late flit behavior for four baseline VCIDs.
-7. **Golden vectors:** publish canonical GLCP sequences, GDP/DLP bit packing, error cases, and timing traces.
+7. **Golden vectors:** publish canonical GLCP sequences, GDP bit packing, CRC cases, malformed-header cases, and timing traces.
 
 ## P1 — complete network behavior
 
-8. **GDP packing:** finalize Version/Type/QoS registries and malformed-packet rules for the 20-octet header candidate while preserving the frozen minimal field set.
+8. **GDP remaining closure:** freeze any still-unassigned Address Form numeric encoding and the invalid-header recovery rule while preserving the accepted fixed Local/Global header layouts.
 9. **GCTL/bootstrap:** specify provisional/link-local GDP addressing, router discovery, prefix delegation/claim, retry/randomization, and authorization.
 10. **Routing:** define route exchange, metrics, prefix delegation, policy, authentication, loop prevention, convergence, and failure recovery. Any authorized capable host may implement the router role.
 11. **Address hierarchy:** freeze bit allocation/variable-prefix policy beneath the human-facing `Top / Org / Division / ... / Device` terminology.
@@ -46,4 +46,4 @@ Priority meanings: **P0** blocks interoperable native-link prototypes; **P1** bl
 
 ## Recommended next decisions
 
-Work next on: (1) GLCP encoding/state machine; (2) DLP CRC/trailer; (3) copper/GMC-8 electrical qualification; (4) golden GC3 traces including realtime preemption; (5) GCTL bootstrap and routing delegation.
+Work next on: (1) GDP invalid-header resynchronization; (2) GLCP encoding/state machine; (3) copper/GMC-8 electrical qualification; (4) golden GDP/GC3 traces; (5) GCTL bootstrap and routing delegation.
