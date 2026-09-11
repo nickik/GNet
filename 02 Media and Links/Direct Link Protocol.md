@@ -12,7 +12,7 @@ updated: 2026-09-11
 ---
 # Direct Link Protocol (DLP)
 
-Status: **ACCEPTED boundary and segment model; DRAFT integrity encoding**
+Status: **ACCEPTED boundary and segment model; invalid-GDP-header resynchronization remains open**
 
 DLP is the minimal Layer-2 data-path contract for one GNet hop. It deliberately avoids global addressing, sessions, routing policy, user identity and application semantics.
 
@@ -38,6 +38,8 @@ DLP does **not** define the superseded 64/256/1024-byte Segment Class field. See
 
 Adaptation profiles that carry a non-GDP protocol directly over DLP MUST define an equivalent bounded-length binding.
 
+If the GDP header fails validation, its Size Class cannot be trusted as a packet boundary. The mechanism for establishing the next trustworthy GDP boundary after such a failure remains unresolved; DLP does not infer a new GDP packet start from arbitrary following carried bits.
+
 ## Link control separation
 
 Dedicated physical control pairs are infrastructure-local and are defined by [[GNet Link Control Protocol]].
@@ -62,9 +64,9 @@ Credit is receive capacity, not instantaneous permission to use a medium or swit
 
 ## Integrity
 
-Hop-local accidental-error detection belongs to DLP. A small CRC is the intended early implementation. The exact CRC polynomial, initialization/reflection convention, trailer packing, and interaction with a final partially occupied carried region remain **DRAFT — requires interoperability validation**.
+The baseline DLP data path defines no periodic CRC window, CHECK/count block, or payload-integrity trailer.
 
-GDP has no checksum or integrity field. End-to-end integrity and reliability belong above GDP.
+GDP provides its own header-only CRC-8 for routing/header interpretation. GDP payload integrity is not guaranteed by DLP or GDP; protocols above GDP provide whatever end-to-end payload integrity they require.
 
 ## Link semantics
 
