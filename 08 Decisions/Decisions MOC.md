@@ -24,7 +24,6 @@ updated: 2026-09-11
 - [[ADR-0012 Minimum GNet-3 Compatibility Profile]]
 - [[ADR-0013 Receiver Credits and Infrastructure Grants]]
 - [[ADR-0014 GC3 GS3 GS10 LAN Ladder]]
-- [[ADR-0016 Access and Carrier Profile Naming]]
 - [[ADR-0018 GDP Header CRC and Local 16-bit Form]]
 
 ## Superseded/history retained
