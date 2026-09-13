@@ -20,7 +20,7 @@ updated: 2026-09-13
 - [[GNet Architecture Overview]] — system-wide architecture.
 - [[Current Protocol Stack Summary]] — compact current state.
 - [[Minimum GNet-3 NIC]] — universal native-NIC compatibility contract.
-- [[GNet Link Control Protocol]] — link bootstrap, credits, grants, and VC control.
+- [[GNet Link Control Protocol]] — link bootstrap, capability/mode negotiation, and infrastructure-local control.
 - [[GNet Coupler]] / [[GNet Switch]] — LAN infrastructure behavior.
 - [[Open Questions]] — prioritized specification backlog.
 - [[Glossary]] — canonical terminology.
