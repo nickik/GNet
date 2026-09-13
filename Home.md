@@ -5,8 +5,8 @@ aliases: ["Home","GNet Knowledge Base"]
 type: home
 status: active
 tags: ["gnet","gnet/home","gnet/status/active"]
-related: ["[[GNet Architecture Overview]]","[[Specification Status]]","[[Open Questions]]"]
-updated: 2026-09-11
+related: ["[[overview]]","[[GNet Architecture Overview]]","[[Specification Status]]","[[Open Questions]]"]
+updated: 2026-09-13
 ---
 # GNet knowledge base
 
@@ -15,6 +15,7 @@ updated: 2026-09-11
 
 ## Start here
 
+- [[overview]] — primary introduction to the GNet protocol suite and how its layers fit together.
 - [[Specification Status]] — current normative baseline and remaining draft work.
 - [[GNet Architecture Overview]] — system-wide architecture.
 - [[Current Protocol Stack Summary]] — compact current state.
