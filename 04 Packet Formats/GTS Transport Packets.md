@@ -7,20 +7,18 @@ status: frozen
 layers: ["L4","L5"]
 tags: ["gnet","gnet/packet","gnet/status/frozen","gnet/layer/l4","gnet/layer/l5"]
 parent: "[[Packet Formats MOC]]"
-related: ["[[GTS Protocol]]","[[Canonical Service Selector]]","[[ADR-0005 Tunnels and Streams]]","[[GDP Datagram]]"]
+related: ["[[GTS Protocol]]","[[GTS Stream Profiles]]","[[Canonical Service Selector]]","[[ADR-0005 Tunnels and Streams]]","[[GDP Datagram]]"]
 updated: 2026-09-14
 ---
 # GTS transport packets
 
-Status: **FROZEN initial traditional packet-routed wire profile; timing constants and golden vectors remain to be added**
+Status: **FROZEN baseline wire profile; timing constants and golden vectors remain to be added**
 
-The initial traditional packet-routed GTS profile uses 32-bit receiver-local Tunnel IDs, 8-bit Stream IDs, 32-bit packet sequence numbers, reliable ordered packet delivery, selective-repeat acknowledgement, separate DATA and ACK packets, packet-by-packet GDP routing, and mandatory end-to-end CRC.
-
-Flow-ID routing, multicast/group transport, unreliable streams, transport congestion control, generic options, and cryptographic negotiation are outside this initial profile.
+GTS uses 32-bit receiver-local Tunnel IDs and 8-bit Stream IDs. A tunnel may contain Reliable Fixed, Reliable Variable, Unreliable Fixed, and Unreliable Variable streams as defined by [[GTS Stream Profiles]]. Reliable streams use packet sequence numbers, selective-repeat ACKs, receive credit and retransmission. Unreliable streams use independent DATAGRAM packets with no GTS ACK or retransmission.
 
 ## Packet type registry
 
-The GTS Type is the low four bits of the first GTS byte; the high four bits are GTS Version.
+The GTS Type is the low four bits of the first GTS byte; the high four bits are GTS Version. Initial GTS Version is `0`.
 
 | Type | Name | Meaning |
 |---:|---|---|
@@ -29,29 +27,51 @@ The GTS Type is the low four bits of the first GTS byte; the high four bits are 
 | `0x2` | CONNECT_ACK | accept/reject CONNECT and return responder state |
 | `0x3` | STREAM_OPEN | create an additional stream in the existing service-bound tunnel |
 | `0x4` | STREAM_ACK | accept/reject STREAM_OPEN |
-| `0x5` | DATA | ordinary full DATA unit |
-| `0x6` | ACK | cumulative + selective acknowledgement and receive credit |
-| `0x7` | DATA_END | final partial DATA unit in one sending direction |
+| `0x5` | DATA | reliable stream data |
+| `0x6` | ACK | reliable-stream cumulative/selective acknowledgement and receive credit |
+| `0x7` | DATA_END | final reliable data unit in one sending direction |
 | `0x8` | STREAM_CLOSE | graceful directional stream close |
 | `0x9` | STREAM_CLOSE_ACK | confirm directional stream close |
 | `0xA` | TUNNEL_CLOSE | graceful tunnel close after streams retire |
 | `0xB` | TUNNEL_CLOSE_ACK | confirm graceful tunnel close |
 | `0xC` | RESET | immediate abnormal tunnel termination |
-| `0xD`-`0xF` | RESERVED | future use |
+| `0xD` | DATAGRAM | unreliable stream datagram |
+| `0xE`-`0xF` | RESERVED | future use |
 
-Unknown or reserved packet types are discarded. An implementation MUST NOT reinterpret an unknown type as DATA or any other known type.
+Unknown or reserved packet types are discarded.
 
 ## Common encoding rules
 
 - multi-byte integers are transmitted most-significant byte first;
-- reserved fields are transmitted as zero and ignored on receipt unless a future version defines them;
-- ordinary GTS packets use CRC-32-GNET;
-- the enclosing GDP Size Class determines the total fixed GDP payload budget;
-- unused bytes after the defined GTS content and before the CRC are zero padding unless otherwise stated;
-- padding is included in the GTS CRC but is never delivered to the application;
-- GTS Version `0` is the initial version.
+- reserved fields are transmitted zero and ignored on receipt unless a future version defines them;
+- the enclosing GDP Size Class determines the total GDP payload budget;
+- zero padding fills unused bytes before the CRC where a packet uses Valid Length;
+- padding is included in the GTS CRC and is never application data;
+- baseline GTS packets use CRC-32-GNET.
 
-## Ordinary DATA packet
+## Stream Parameters byte
+
+CONNECT and STREAM_OPEN use the same byte:
+
+```text
+bit  7      Unreliable
+bit  6      Variable
+bits 5..4   Reserved = 0
+bits 3..0   Size Class
+```
+
+Interpretation:
+
+```text
+Unreliable=0 Variable=0   Reliable Fixed
+Unreliable=0 Variable=1   Reliable Variable
+Unreliable=1 Variable=0   Unreliable Fixed
+Unreliable=1 Variable=1   Unreliable Variable
+```
+
+For Fixed streams, Size Class is the exact GDP Size Class used by every data packet. For Variable streams, Size Class is the maximum class and each data packet may choose any supported class not greater than that maximum.
+
+## Reliable Fixed DATA
 
 ```text
 DATA
@@ -64,13 +84,30 @@ Data                   N
 CRC-32                4 B
 ```
 
-Fixed overhead is 14 bytes. Sequence numbers identify DATA packets, not byte offsets, and are interpreted modulo `2^32` independently for each stream.
+Fixed overhead is 14 bytes. The packet's GDP Size Class is the exact class negotiated for the stream, so no payload-length field is needed. Sequence numbers count DATA/DATA_END packets, not bytes.
 
-DATA does not carry acknowledgement state, receive credit, CSS, Reset ID, source Tunnel ID, QoS, flags, or payload length.
+## Reliable Variable DATA
 
-## DATA_END packet
+```text
+DATA
+--------------------------------
+Version/Type          1 B
+Tunnel ID             4 B
+Stream ID             1 B
+Sequence              4 B
+Valid Length          2 B
+Data                   N
+Padding                P
+CRC-32                4 B
+```
 
-`DATA_END` is sequenced and acknowledged exactly like DATA but carries a 16-bit Valid Length before its application bytes:
+Fixed overhead is 16 bytes. The sender may choose any GDP Size Class up to the stream maximum. `Valid Length` is the number of meaningful application bytes following the field. Remaining bytes before CRC are zero padding.
+
+Different packet sizes do not change sequence semantics; the sequence still advances by one per DATA/DATA_END packet.
+
+## DATA_END
+
+DATA_END is used only on reliable streams and is sequenced/acknowledged exactly like DATA:
 
 ```text
 DATA_END
@@ -85,11 +122,45 @@ Padding                P
 CRC-32                4 B
 ```
 
-`Valid Length` is the number of application-data bytes following the field that are meaningful. It MUST NOT exceed the remaining data capacity of the enclosing GDP Size Class. Bytes after Valid Length and before CRC are zero padding and are not delivered.
+For Reliable Fixed, DATA_END provides the partial final unit. For Reliable Variable, it has the same payload layout as variable DATA but additionally states that no later DATA/DATA_END will be generated in that sending direction.
 
-`DATA_END` means that no further DATA/DATA_END sequence numbers will be generated in this sending direction unless a later stream-incarnation mechanism is explicitly defined. The opposite direction remains independent.
+## Unreliable Fixed DATAGRAM
+
+```text
+DATAGRAM
+--------------------------------
+Version/Type          1 B
+Tunnel ID             4 B
+Stream ID             1 B
+Data                   N
+CRC-32                4 B
+```
+
+Fixed overhead is 10 bytes. Every packet uses the stream's exact GDP Size Class.
+
+DATAGRAM contains no GTS sequence number. GTS performs no acknowledgement, retransmission, reordering, duplicate suppression, or loss detection for unreliable streams.
+
+## Unreliable Variable DATAGRAM
+
+```text
+DATAGRAM
+--------------------------------
+Version/Type          1 B
+Tunnel ID             4 B
+Stream ID             1 B
+Valid Length          2 B
+Data                   N
+Padding                P
+CRC-32                4 B
+```
+
+Fixed overhead is 12 bytes. The sender chooses any GDP Size Class up to the negotiated stream maximum. `Valid Length` identifies meaningful application bytes and remaining bytes before CRC are zero padding.
+
+Applications that need media sequence numbers, timestamps, epochs or application-specific loss detection place those fields in their own payload.
 
 ## ACK packet
+
+ACK exists only for reliable streams:
 
 ```text
 ACK
@@ -106,33 +177,21 @@ CRC-32                4 B
                       20 B
 ```
 
-`ACK Base` is the highest DATA/DATA_END sequence number such that that packet and every preceding packet in the current sequence space have been received correctly. It cumulatively acknowledges every packet through that sequence.
+`ACK Base` cumulatively acknowledges every sequence through that value. Bitmap bit 0 represents ACK Base+1 and bit 31 represents ACK Base+32; `1` means the complete packet was received correctly.
 
-The 32-bit Receive Bitmap reports the next 32 sequence numbers after ACK Base. Bit 0 represents ACK Base + 1 and bit 31 represents ACK Base + 32. A `1` means the complete packet was received correctly; `0` means it remains missing.
+`Receive Credit` is a packet count. On a Reliable Fixed stream, one credit reserves one packet of the fixed class. On a Reliable Variable stream, one credit guarantees capacity for one packet up to the negotiated maximum Size Class.
 
-`Receive Credit` is an unsigned 8-bit count of additional DATA/DATA_END packets the receiver is prepared to accept. The unit is packets, not bytes. `0` forbids introduction of new sequence numbers; retransmission of already-outstanding packets does not consume new sequence-space credit. `255` means at least 255 additional packets may be accepted.
+An ACK MUST NOT be generated for an unreliable stream.
 
 ## ACK timing and retransmission
 
-Under normal in-order traffic the receiver sends an ACK after every two correctly received DATA/DATA_END packets. If only one packet is pending acknowledgement, it sends an ACK when the short delayed-ACK timer expires.
+Reliable streams retain the baseline selective-repeat behavior: normally ACK every two correctly received DATA/DATA_END packets, use a short delayed ACK when one packet remains pending, immediately report a newly observed gap or a gap fill that advances ACK Base, and retransmit bitmap-visible holes immediately. An adaptive retransmission timeout covers losses not exposed by later packets.
 
-An ACK is sent immediately when a gap is first observed, when a previously reported gap is filled and ACK Base advances, or when Receive Credit reaches zero or changes in a way required to restart a stalled sender.
-
-When an ACK bitmap positively acknowledges a later packet while an earlier outstanding packet in the represented range remains zero, the sender treats the earlier packet as an explicit hole and retransmits it immediately. GTS does not use duplicate-ACK counting for this purpose.
-
-A retransmission timeout remains mandatory. The initial profile uses an adaptive timeout from measured RTT. One retransmission timer per stream is sufficient. On timeout, the oldest outstanding unacknowledged packet is retransmitted and the timer is restarted conservatively. Exact estimator constants and timer bounds remain to be frozen separately.
+Unreliable streams have no GTS retransmission timer.
 
 ## CONNECT
 
-CONNECT performs three operations together:
-
-1. selects exactly one logical service using CSS;
-2. creates a tunnel bound to that service;
-3. creates Stream 0 inside that tunnel.
-
-The initiator owns the even Stream ID namespace and Stream 0 is created immediately by CONNECT.
-
-CONNECT layout:
+CONNECT selects one CSS, creates the tunnel, and creates Stream 0. Stream 0 may use any of the four baseline stream profiles.
 
 ```text
 CONNECT
@@ -140,7 +199,7 @@ CONNECT
 Version/Type              1 B
 Initiator Receive Tunnel  4 B
 Initiator Reset ID        4 B
-Stream-0 Size Class       1 B
+Stream-0 Parameters       1 B
 Initial Receive Credit    1 B
 CSS Representation/Res.   1 B
 CSS Selector              1/4/16 B
@@ -148,70 +207,20 @@ Padding                   P
 CRC-32                    4 B
 ```
 
-`Initiator Receive Tunnel` is the 32-bit receiver-local Tunnel ID the responder MUST use for packets sent toward the initiator after successful establishment.
+`Stream-0 Parameters` uses the Stream Parameters layout above. For an unreliable Stream 0, `Initial Receive Credit` MUST be zero.
 
-`Initiator Reset ID` is a 32-bit receiver-local reset capability allocated by the initiator. A RESET directed at the initiator must present this value.
+The CSS representation field uses the high two bits:
 
-`Stream-0 Size Class` uses the low four bits to identify the fixed GDP Size Class used for ordinary DATA on Stream 0. The high four bits are reserved and transmitted zero.
+| Bits | Name | Selector bytes |
+|---:|---|---:|
+| `00` | Registered-8 | 1 |
+| `01` | Short-32 | 4 |
+| `10` | Full-128 | 16 |
+| `11` | Reserved | — |
 
-`Initial Receive Credit` advertises how many Stream-0 DATA packets the initiator can initially accept from the responder.
-
-### CSS representation byte
-
-`CSS Representation/Reserved` is:
-
-```text
-bits 7..6   CSS Representation
-bits 5..0   Reserved = 0
-```
-
-The representation determines the selector field immediately following it:
-
-| Bits | Name | Selector bytes | Expansion |
-|---:|---|---:|---|
-| `00` | Registered-8 | 1 | registry code -> Short-32 -> CSS128 |
-| `01` | Short-32 | 4 | four ASCII bytes -> high 32 bits of CSS128, low 96 bits zero |
-| `10` | Full-128 | 16 | complete CSS128 value |
-| `11` | Reserved | — | invalid in this profile |
-
-The complete rules are defined by [[Canonical Service Selector]].
-
-All forms identify values in **one 128-bit canonical CSS namespace**. They are not different service namespaces.
-
-Registered-8 uses [[CSS Registered Service Registry]]. For example:
-
-```text
--FILE
-    wire Registered-8 = 0x01
-    Short-32          = 0x46494C45
-    CSS128            = 46494C45000000000000000000000000
-```
-
-Short-32 example:
-
-```text
-#CAPI
-    wire Short-32 = 43 41 50 49
-    CSS128        = 43415049000000000000000000000000
-```
-
-Full-128 example:
-
-```text
-0123456789ABCDEF0123456789ABCDEF
-```
-
-The shortest available representation is mandatory. A registered service MUST use Registered-8 rather than Short-32 or Full-128. A non-registered service representable by valid Short-32 MUST use Short-32 rather than Full-128.
-
-A receiver expands the selector to CSS128 before service lookup. A non-canonical longer representation SHOULD be rejected as malformed.
-
-The CONNECT packet itself has no destination Tunnel ID because no responder-local tunnel exists yet. GDP source/destination addressing identifies the two endpoints.
-
-On acceptance, the resulting tunnel is bound to the canonical CSS for its lifetime. Every stream created in that tunnel belongs to the same selected service.
+The complete namespace and canonicalization rules are defined by [[Canonical Service Selector]]. Successful CONNECT binds the canonical CSS to the tunnel for its lifetime.
 
 ## CONNECT_ACK
-
-CONNECT_ACK returns the responder-local state and either accepts or rejects the request.
 
 ```text
 CONNECT_ACK
@@ -227,13 +236,9 @@ Padding                   P
 CRC-32                    4 B
 ```
 
-The `Initiator Receive Tunnel` echoes the value supplied in CONNECT and correlates the reply without requiring a separate transaction number.
+On success, `Responder Receive Tunnel` is the receiver-local Tunnel ID the initiator uses for packets sent toward the responder. For an unreliable Stream 0, `Initial Receive Credit` MUST be zero.
 
-On success, `Responder Receive Tunnel` is the receiver-local Tunnel ID the initiator MUST use for subsequent packets sent to the responder. `Responder Reset ID` is the reset capability required for a RESET directed at the responder.
-
-`Initial Receive Credit` is the responder's initial receive credit for Stream 0.
-
-Initial Status values:
+Status values:
 
 | Status | Meaning |
 |---:|---|
@@ -243,9 +248,10 @@ Initial Status values:
 | `3` | unsupported, malformed, or non-canonical CSS |
 | `4` | unsupported Stream-0 Size Class |
 | `5` | administratively rejected |
-| `6`-`255` | reserved |
+| `6` | unsupported Stream-0 profile |
+| `7`-`255` | reserved |
 
-On rejection, the responder receive Tunnel ID and Reset ID MUST be zero and no tunnel state is established.
+On rejection, responder Tunnel ID and Reset ID are zero and no tunnel state is established.
 
 ## Additional streams
 
@@ -255,45 +261,41 @@ Stream IDs are 8 bits with parity ownership:
 - CONNECT responder allocates odd Stream IDs;
 - Stream 0 is created by CONNECT.
 
-An endpoint MUST NOT allocate a Stream ID owned by the peer's parity.
-
-Additional streams belong to the CSS selected by CONNECT. STREAM_OPEN does not carry a selector and cannot switch the tunnel to another service.
+Additional streams belong to the CSS selected by CONNECT.
 
 ### STREAM_OPEN
 
 ```text
 STREAM_OPEN
 --------------------------------
-Version/Type          1 B
-Tunnel ID             4 B
-Stream ID             1 B
-Data Size Class       1 B
+Version/Type           1 B
+Tunnel ID              4 B
+Stream ID              1 B
+Stream Parameters      1 B
 Initial Receive Credit 1 B
-Reserved              1 B
-Padding               P
-CRC-32                4 B
+Reserved               1 B
+Padding                P
+CRC-32                 4 B
 ```
 
-`Tunnel ID` is the peer's receiver-local Tunnel ID. `Data Size Class` uses the low four bits; the high four bits are zero/reserved. The stream uses that fixed GDP Size Class for ordinary DATA/DATA_END in both directions in the initial profile.
-
-The opening endpoint's `Initial Receive Credit` states how many packets it can initially receive on the new stream.
+For an unreliable stream, `Initial Receive Credit` MUST be zero.
 
 ### STREAM_ACK
 
 ```text
 STREAM_ACK
 --------------------------------
-Version/Type          1 B
-Tunnel ID             4 B
-Stream ID             1 B
-Status                1 B
+Version/Type           1 B
+Tunnel ID              4 B
+Stream ID              1 B
+Status                 1 B
 Initial Receive Credit 1 B
-Reserved              1 B
-Padding               P
-CRC-32                4 B
+Reserved               1 B
+Padding                P
+CRC-32                 4 B
 ```
 
-Initial Status values:
+Status values:
 
 | Status | Meaning |
 |---:|---|
@@ -301,17 +303,14 @@ Initial Status values:
 | `1` | Stream ID invalid or wrong parity |
 | `2` | Stream ID already in use |
 | `3` | resource unavailable |
-| `4` | unsupported Data Size Class |
+| `4` | unsupported Size Class |
 | `5` | administratively rejected |
-| `6`-`255` | reserved |
+| `6` | unsupported stream profile |
+| `7`-`255` | reserved |
 
-On acceptance, `Initial Receive Credit` is the responder's initial receive credit for the stream. On rejection it is zero.
-
-Selecting another CSS requires another CONNECT and therefore another tunnel.
+For an accepted unreliable stream, `Initial Receive Credit` MUST be zero.
 
 ## Graceful stream close
-
-`STREAM_CLOSE` is directional and states that the sender will transmit no more DATA/DATA_END in that direction.
 
 ```text
 STREAM_CLOSE
@@ -324,10 +323,6 @@ Padding                P
 CRC-32                4 B
 ```
 
-`Final Sequence` is the sequence number of the final DATA/DATA_END packet in this sending direction. The receiver MUST NOT consider the sending direction gracefully closed until every packet through Final Sequence has been received correctly.
-
-`STREAM_CLOSE_ACK` confirms that condition:
-
 ```text
 STREAM_CLOSE_ACK
 --------------------------------
@@ -339,35 +334,24 @@ Padding                P
 CRC-32                4 B
 ```
 
-The opposite stream direction may remain open. A stream is fully retired only after both directions have completed graceful close.
+For a reliable stream, `Final Sequence` identifies the final DATA/DATA_END packet and ACK confirms receipt through it. For an unreliable stream, `Final Sequence` MUST be zero; STREAM_CLOSE/STREAM_CLOSE_ACK only synchronize stream-state retirement and do not imply delivery of previous DATAGRAM packets.
 
 ## Graceful tunnel close
 
-A tunnel may be gracefully closed only after all streams are fully retired.
+A tunnel may be gracefully closed after all streams are retired:
 
 ```text
 TUNNEL_CLOSE
 --------------------------------
 Version/Type          1 B
 Tunnel ID             4 B
-Padding               P
+Padding                P
 CRC-32                4 B
 ```
 
-```text
-TUNNEL_CLOSE_ACK
---------------------------------
-Version/Type          1 B
-Tunnel ID             4 B
-Padding               P
-CRC-32                4 B
-```
-
-The peer receiving TUNNEL_CLOSE replies with TUNNEL_CLOSE_ACK and retires the tunnel after retaining sufficient stale-packet guard state. The initiator retires its side after receiving TUNNEL_CLOSE_ACK.
+TUNNEL_CLOSE_ACK has the same fields. The receiver retires the tunnel while retaining stale-state protection as required by the protocol.
 
 ## RESET
-
-RESET is immediate abnormal termination of the entire tunnel and all of its streams. It is not a graceful close and does not wait for outstanding DATA.
 
 ```text
 RESET
@@ -380,40 +364,17 @@ Padding                P
 CRC-32                4 B
 ```
 
-`Tunnel ID` identifies the receiver-local tunnel to destroy. `Reset ID` MUST equal the 32-bit reset capability the receiver supplied during CONNECT/CONNECT_ACK. A RESET with an incorrect Reset ID is discarded without changing tunnel state.
+RESET immediately destroys the tunnel and all streams. The Reset ID must match the receiver-local capability established by CONNECT/CONNECT_ACK. RESET is not acknowledged.
 
-Initial Reason values:
+## Identifier reuse
 
-| Reason | Meaning |
-|---:|---|
-| `0` | unspecified fatal failure |
-| `1` | protocol/state violation |
-| `2` | application/service abort |
-| `3` | local resource failure |
-| `4` | stale/invalid stream state |
-| `5`-`255` | reserved |
-
-RESET is not acknowledged. Repeated valid RESET packets are idempotent during the stale-packet guard interval.
-
-## Stale packet and identifier reuse baseline
-
-A receiver MUST NOT immediately reuse a recently retired Tunnel ID or Stream ID while delayed packets from the previous incarnation could still be accepted as current traffic.
-
-For the initial profile, implementations maintain a finite stale-state guard interval of at least **twice the maximum configured retransmission timeout** after graceful retirement or RESET. During this interval, packets for the retired incarnation are discarded. Exact larger guard requirements may be defined later for specific long-delay network profiles.
+Retired Tunnel IDs and Stream IDs are not immediately reused. Implementations retain stale-state rejection information for at least twice the maximum configured retransmission timeout after graceful retirement or RESET.
 
 ## Mandatory integrity trailer
 
-Every ordinary GTS packet uses CRC-32-GNET except future compact GTS forms using the dedicated 0-byte/3-byte tiny classes, which use CRC-8-GNET.
+The baseline currently retains CRC-32-GNET for reliable DATA, unreliable DATAGRAM, and all ordinary GTS control packets:
 
 ```text
-CRC-8-GNET
-  polynomial  0x07
-  init        0x00
-  refin       false
-  refout      false
-  xorout      0x00
-  check       "123456789" -> 0xF4
-
 CRC-32-GNET
   polynomial  0x04C11DB7
   init        0xFFFFFFFF
@@ -435,29 +396,29 @@ effective 64-bit Destination Address
 complete GTS header/content/padding
 ```
 
-For Global GDP, effective addresses are the transmitted 64-bit addresses. For Local GDP, the local IDs are expanded to their canonical 64-bit endpoint identities before CRC calculation. Hop Limit, Local/Global representation, reserved GDP bits, and mutable forwarding state are excluded.
+For Local GDP, local IDs are expanded to their canonical 64-bit endpoint identities before CRC calculation. Hop Limit, Local/Global representation, reserved GDP bits, and mutable forwarding state are excluded.
 
-A failed CRC causes the packet to be discarded and treated as not received.
+A failed CRC causes the GTS packet to be discarded. For reliable streams the normal retransmission machinery can recover it; for unreliable streams it is simply lost.
+
+Alternative header-only/no-payload integrity coverage for unreliable media remains a separate design decision and is not frozen here.
 
 ## Canonical Service Selector summary
 
-The selector carried by CONNECT follows [[Canonical Service Selector]]. Canonical presentation examples are:
+CONNECT follows [[Canonical Service Selector]]. Examples:
 
 ```text
 <GDP-address>:-FILE
 <GDP-address>:-GRPC
 <GDP-address>:#CAPI
-<GDP-address>:#MYEP
 <GDP-address>:0123456789ABCDEF0123456789ABCDEF
 ```
 
-The GDP address identifies the endpoint. CSS identifies the service at that endpoint. CSS is not repeated in DATA, ACK, STREAM_OPEN, or other ordinary established-tunnel packets.
+CSS is not repeated in DATA, DATAGRAM, ACK, STREAM_OPEN, or other established-tunnel packets.
 
 ## Remaining initial-profile work
 
-The core wire layouts, CSS representation, and state transitions are frozen. Remaining work is limited to:
-
-- exact delayed-ACK timer and adaptive-RTO integer constants/bounds;
+- exact delayed-ACK timer and adaptive-RTO constants/bounds for reliable streams;
 - exact stale-state timing profiles beyond the minimum rule;
 - malformed-control-packet reason mapping where not already covered by GCTL;
-- golden packet/CRC/conformance vectors.
+- golden packet/CRC/conformance vectors;
+- decide whether unreliable streams need an optional header-only integrity profile.
