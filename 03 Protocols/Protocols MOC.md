@@ -23,6 +23,7 @@ updated: 2026-09-14
 ## Transport and sessions
 
 - [[GTS Protocol]] — tunnels, reset authority, streams and delivery.
+- [[GTS Stream Profiles]] — reliable/unreliable and fixed/variable stream behavior.
 - [[Canonical Service Selector]] — one 128-bit service namespace with Registered-8, Short-32, and Full-128 representations.
 - [[GSC Protocol]] — GNet Session / SIP-like interactive-session signaling.
 - [[Voice over GNet]] — native packet-voice profile using GSC signaling plus admitted realtime media flows.
