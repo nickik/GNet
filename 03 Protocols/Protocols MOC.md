@@ -7,7 +7,7 @@ status: active
 tags: ["gnet", "gnet/moc", "gnet/protocol", "gnet/status/active"]
 parent: "[[GNet Home]]"
 related: ["[[Architecture MOC]]", "[[Packet Formats MOC]]", "[[Registries MOC]]"]
-updated: 2026-09-03
+updated: 2026-09-14
 ---
 # Protocols map of content
 
@@ -23,6 +23,7 @@ updated: 2026-09-03
 ## Transport and sessions
 
 - [[GTS Protocol]] — tunnels, reset authority, streams and delivery.
+- [[Canonical Service Selector]] — one 128-bit service namespace with Registered-8, Short-32, and Full-128 representations.
 - [[GSC Protocol]] — GNet Session / SIP-like interactive-session signaling.
 - [[Voice over GNet]] — native packet-voice profile using GSC signaling plus admitted realtime media flows.
 - [[GTerm Protocol]] — routable virtual terminals.
