@@ -7,7 +7,7 @@ status: mixed
 tags: ["gnet","gnet/meta","gnet/status/mixed"]
 parent: "[[GNet Home]]"
 related: ["[[Open Questions]]","[[GNet Architecture Overview]]","[[Decisions MOC]]"]
-updated: 2026-09-11
+updated: 2026-09-14
 ---
 # Specification status
 
@@ -36,6 +36,8 @@ This repository is the canonical working specification for GNet. It is coherent 
 - The current baseline does not define periodic DLP payload-integrity windows. End-to-end payload integrity belongs above GDP.
 - GNet uses hierarchical global addresses and does not depend on Ethernet MAC learning, collision domains, or NAT.
 - `FE80::/16` is the reserved non-routable link-local GDP prefix; clients generate their own 48-bit suffixes.
+- CSS is one canonical 128-bit service namespace. GTS CONNECT carries its shortest canonical representation: Registered-8, Short-32, or Full-128. Short-32 occupies the high 32 bits of CSS128 with the low 96 bits zero.
+- A successful GTS CONNECT binds one CSS to the tunnel and creates Stream 0. STREAM_OPEN creates additional streams inside that same service-bound tunnel and does not select another service.
 
 ## ACCEPTED product/profile direction
 
