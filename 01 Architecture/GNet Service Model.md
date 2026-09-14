@@ -7,27 +7,34 @@ status: mixed
 layers: ["L4","L6","L7"]
 tags: ["gnet","gnet/architecture","gnet/status/mixed","gnet/layer/l4","gnet/layer/l6","gnet/layer/l7"]
 parent: "[[Architecture MOC]]"
-related: ["[[Discovery and Bootstrap]]","[[GTS Protocol]]","[[GSC Protocol]]"]
-updated: 2026-09-09
+related: ["[[Discovery and Bootstrap]]","[[GTS Protocol]]","[[Canonical Service Selector]]","[[GSC Protocol]]"]
+updated: 2026-09-14
 ---
 # Names, services, and endpoint selection
 
 > [!info] Knowledge graph
-> **Up:** [[Architecture MOC]] · **Related:** [[Discovery and Bootstrap]] · [[GTS Protocol]] · [[GSC Protocol]]
+> **Up:** [[Architecture MOC]] · **Related:** [[Discovery and Bootstrap]] · [[GTS Protocol]] · [[Canonical Service Selector]] · [[GSC Protocol]]
 
-
-Status: **ACCEPTED service-selector model; OPEN directory and exact wire packing**
+Status: **ACCEPTED service-selector model; OPEN directory protocol and record packing**
 
 GNet distinguishes four different identifiers:
 
 | Identifier | Scope | Purpose |
 |---|---|---|
 | GDP address | global, routable | identify the current network endpoint/location |
-| Tunnel ID | end-to-end session | identify a transport association independently of a single packet |
-| Stream ID | within one tunnel | multiplex independently negotiated data streams |
-| Service selector | setup and directory | identify the requested logical service |
+| Tunnel ID | receiver-local transport state | identify an established GTS tunnel |
+| Stream ID | within one tunnel | multiplex reliable data streams |
+| Canonical Service Selector (CSS) | tunnel setup and directory | identify the requested logical service |
 
-A service name identifies a logical resource, not necessarily a machine. One name may resolve to several providers. The directory may select or rank providers by reachability, availability, load, location, authorization, or policy. GTS itself supports compact binary or fixed-width textual Service Selectors; higher-level directories may map longer human-readable names to them.
+A service name identifies a logical resource, not necessarily a machine. One name may resolve to several providers. The directory may select or rank providers by reachability, availability, load, location, authorization, or policy.
+
+The directory/naming layer and CSS are separate. A long human-facing service name may resolve to one or more pairs of:
+
+```text
+GDP address + CSS
+```
+
+GTS uses the CSS only during CONNECT. After the tunnel exists, ordinary transport packets use Tunnel ID and Stream ID and do not repeat the service selector.
 
 ## Directory service record
 
@@ -36,7 +43,7 @@ The working record model contains:
 - service name;
 - service type;
 - one or more GDP addresses;
-- GTS service selector;
+- Canonical Service Selector;
 - supported terminal or application classes;
 - authentication method;
 - availability/load or preference;
@@ -44,51 +51,88 @@ The working record model contains:
 - access group or authorization policy;
 - validity/lifetime.
 
-The exact binary record, naming grammar, replication, and selection algorithm remain OPEN.
+The exact directory binary record, naming grammar, replication, and selection algorithm remain OPEN.
 
-## Variable-width service selectors
+## Canonical Service Selector
 
-GTS does not use fixed 16-bit TCP-style source and destination ports. Service selection is a setup operation, separate from tunnel and stream identity.
+CSS is one **128-bit canonical service namespace** with three wire representations:
 
-A Service Selector begins with a 2-bit Size Class. The class determines the representation that follows:
+| Representation | Wire field | Purpose |
+|---|---:|---|
+| Registered-8 | 8 bits | globally registered common service |
+| Short-32 | 32 bits | four-character service mnemonic |
+| Full-128 | 128 bits | full canonical selector |
 
-| Size class | Selector field | Representation | Intended use |
-|---:|---:|---|---|
-| 0 | 8 bits | numeric service code | common registered services and very small systems |
-| 1 | 32 bits | 4 ASCII characters | compact named services |
-| 2 | 128 bits | 16 ASCII characters | sparse, private, or opaque named services |
-| 3 | reserved | — | future expansion |
+These are compressed representations of the same identity, not separate namespaces.
 
-ASCII names occupy fixed-width byte fields. Names shorter than the field are terminated and padded with zero bytes. The exact allowed character set and case rules remain OPEN.
+A Short-32 value is exactly four uppercase ASCII letters/digits and maps into the most-significant 32 bits of CSS128; the low 96 bits are zero.
 
-The common class-0 case therefore requires only 10 logical selector bits: a 2-bit class plus an 8-bit Service ID. A small implementation may support only class 0, while larger systems can support named service selectors without changing the GTS service-selection model.
-
-Examples:
+For example:
 
 ```text
-00 + 05                        -> registered service 5, e.g. FILE
-01 + "FILE"                    -> four-character named service
-10 + "oooooofilesy\0\0\0\0" -> private 128-bit selector field
+#CAPI
+    Short-32 = 0x43415049
+    CSS128   = 43415049000000000000000000000000
 ```
 
-The textual forms are still exact selector values, not names that GTS must further resolve.
+Registered-8 values map through the global CSS registry to a four-character Short-32 mnemonic, then to CSS128:
 
-### Enumeration properties
+```text
+-FILE
+    Registered-8 = 0x01
+    Short-32     = 0x46494C45   "FILE"
+    CSS128       = 46494C45000000000000000000000000
 
-The 8-bit namespace is deliberately enumerable and is suitable for public/common services. The 32-bit and especially 128-bit textual namespaces can be allocated sparsely so that exhaustive scanning is impractical.
+-GRPC
+    Registered-8 = 0x02
+    Short-32     = 0x47525043   "GRPC"
+    CSS128       = 47525043000000000000000000000000
+```
 
-The width does not by itself make a selector secret. Predictable names can be guessed with a dictionary regardless of the size of the field. A private selector intended to resist scanning should therefore be sufficiently unpredictable within its namespace.
+The shortest available representation is canonical. Because `FILE` has a Registered-8 assignment, `#FILE` is not a separate service and is not a canonical wire representation.
 
-This is not cryptographic protection. A passive observer that sees a Service Selector during setup can learn and later reuse that value. Encryption and authentication are outside the current baseline.
+The complete normative rules are in [[Canonical Service Selector]] and numeric Registered-8 assignments are in [[CSS Registered Service Registry]].
 
-Service enumeration is not required by GTS. A higher-level discovery or directory service may publish selected services, while private selectors can be distributed by configuration or other mechanisms.
+## Endpoint presentation
 
-## Setup-only use
+An endpoint and selected service may be written as:
 
-The Service Selector is carried when a service is selected, in CONNECT or STREAM_OPEN as defined by GTS. Once a tunnel/stream has been established, ordinary DATA packets identify it through tunnel and stream state and do not repeat the Service Selector.
+```text
+<GDP-address>:-FILE
+<GDP-address>:-GRPC
+<GDP-address>:#CAPI
+<GDP-address>:#MYEP
+<GDP-address>:0123456789ABCDEF0123456789ABCDEF
+```
 
-This keeps service naming separate from transport demultiplexing: Tunnel IDs identify transport associations, Stream IDs identify flows within those tunnels, and Service Selectors identify what logical service is requested.
+The GDP address answers **where**. CSS answers **which service at that endpoint**.
+
+This notation is presentation syntax; GDP carries only the address and GTS CONNECT carries the CSS.
+
+## Tunnel binding
+
+A GTS CONNECT selects exactly one CSS and simultaneously creates the tunnel and Stream 0.
+
+If accepted, the tunnel is bound to that service identity for its lifetime. Additional STREAM_OPEN exchanges create more streams inside the same selected service. STREAM_OPEN does not select a second service and does not contain CSS.
+
+Selecting another service at the same GDP address requires another GTS tunnel.
+
+This separation keeps service naming out of ordinary data packets:
+
+```text
+CONNECT       GDP address + CSS -> create service-bound tunnel
+DATA          Tunnel ID + Stream ID
+STREAM_OPEN   Tunnel ID + new Stream ID
+```
+
+## Enumeration properties
+
+Registered-8 and Short-32 selectors are deliberately enumerable and are suitable for common/public services.
+
+A sparse Full-128 CSS can make blind enumeration impractical when its value is unpredictable, but width is not authentication. A passive observer that learns a CSS may attempt to use it. Authentication and authorization belong to the selected service or a higher security layer.
+
+Service enumeration is not required by GTS. A higher-level discovery or directory service may publish selected services, while private Full-128 selectors may be distributed by configuration or another authorized mechanism.
 
 ## Location independence
 
-Directory results may refer to local or remote subnets. GTerm and other services must behave uniformly in both cases; discovery is not limited to a LAT-style local broadcast domain.
+Directory results may refer to local or remote networks. GTerm and other services must behave uniformly in both cases; discovery is not limited to a local broadcast domain.
