@@ -7,7 +7,7 @@ status: active
 tags: ["gnet","gnet/moc","gnet/decision","gnet/status/active"]
 parent: "[[GNet Home]]"
 related: ["[[Architecture MOC]]","[[Open Questions]]"]
-updated: 2026-09-11
+updated: 2026-09-14
 ---
 # Decisions map of content
 
@@ -25,6 +25,7 @@ updated: 2026-09-11
 - [[ADR-0013 Receiver Credits and Infrastructure Grants]]
 - [[ADR-0014 GC3 GS3 GS10 LAN Ladder]]
 - [[ADR-0018 GDP Header CRC and Local 16-bit Form]]
+- [[ADR-0019 GCTL Credit and Bootstrap Wire Profile]]
 
 ## Superseded/history retained
 
