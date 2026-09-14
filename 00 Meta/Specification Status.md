@@ -38,11 +38,13 @@ This repository is the canonical working specification for GNet. It is coherent 
 - `FE80::/16` is the reserved non-routable link-local GDP prefix; clients generate their own 48-bit suffixes.
 - CSS is one canonical 128-bit service namespace. GTS CONNECT carries its shortest canonical representation: Registered-8, Short-32, or Full-128. Short-32 occupies the high 32 bits of CSS128 with the low 96 bits zero.
 - A successful GTS CONNECT binds one CSS to the tunnel and creates Stream 0. STREAM_OPEN creates additional streams inside that same service-bound tunnel and does not select another service.
-- Every GTS stream independently selects reliable/unreliable delivery and fixed/variable packet sizing through one Stream Parameters byte.
-- GTS defines four baseline profiles: Reliable Fixed, Reliable Variable, Unreliable Fixed, and Unreliable Variable. Stream 0 may use any of them and one tunnel may mix profiles across streams.
-- Reliable streams use packet sequence numbers, selective ACK, retransmission and GTS Receive Credit. Variable reliable streams add Valid Length while retaining packet-based ACK semantics.
-- Unreliable streams use `DATAGRAM` (`0xD`) with no GTS sequence number, ACK, retransmission, ordering, duplicate suppression, loss detection, or GTS Receive Credit. Variable unreliable DATAGRAM adds Valid Length.
-- Baseline GTS still uses CRC-32 end-to-end for both reliable DATA and unreliable DATAGRAM packets. Header-only integrity for unreliable media remains an open extension decision.
+- GTS is message-preserving: one DATA, DATA_END, or DATAGRAM packet is one application message unit. Reliable streams preserve message order and message boundaries; APIs may concatenate messages into a conventional byte stream.
+- Every GTS stream uses a 16-bit Stream Profile selecting reliable/unreliable delivery, fixed/variable sizing, optional sequencing for unreliable traffic, optional unchecked payload for unreliable traffic, stream direction, and Size Class.
+- Direction values are `01` opener->peer, `10` peer->opener, `11` bidirectional, with `00` reserved/invalid.
+- Reliable streams use packet/message sequence numbers, selective ACK, retransmission and GTS Receive Credit. Variable reliable streams add Valid Length while retaining packet-based ACK semantics.
+- Unreliable streams use `DATAGRAM` (`0xD`) with no ACK, retransmission, or GTS Receive Credit. They may optionally carry a 32-bit sequence number for stale/duplicate/loss detection without retransmission.
+- Unreliable streams may use Unchecked Payload: CRC-32 remains present and protects the canonical GDP pseudo-header and all GTS transport metadata, while application payload and padding are excluded. Reliable streams always use full payload CRC coverage.
+- `STREAM_RESET` (`0xE`) and `STREAM_RESET_ACK` (`0xF`) immediately retire one stream without destroying its tunnel or sibling streams.
 
 ## ACCEPTED product/profile direction
 
@@ -68,7 +70,7 @@ GNET-A remains a separate centrally scheduled residential-access family. GNET-P 
 - GNet-20 bonded-lane/in-band-control encoding.
 - Final GNET-P control/framing and commercial name separation from LAN GNet-10.
 - GCTL bootstrap addressing/encodings and full routing protocol.
-- GTS reliable-stream timing constants, congestion-control behavior, integrity-profile extensions, and application protocols.
+- GTS delayed-ACK/RTO constants, STREAM_RESET retransmission timing, congestion-control behavior, and application protocols.
 
 ## Interpretation rule
 
