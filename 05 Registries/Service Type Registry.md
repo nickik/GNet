@@ -6,16 +6,17 @@ type: registry
 status: draft
 tags: ["gnet","gnet/registry","gnet/status/draft"]
 parent: "[[Registries MOC]]"
-related: ["[[Discovery Packets]]","[[GNet Service Model]]"]
-updated: 2026-09-02
+related: ["[[Discovery Packets]]","[[GNet Service Model]]","[[Canonical Service Selector]]"]
+updated: 2026-09-14
 ---
 # Discovery service registry
 
 > [!info] Knowledge graph
-> **Up:** [[Registries MOC]] · **Related:** [[Discovery Packets]] · [[GNet Service Model]]
-
+> **Up:** [[Registries MOC]] · **Related:** [[Discovery Packets]] · [[GNet Service Model]] · [[Canonical Service Selector]]
 
 Status: **DRAFT allocations**
+
+This registry classifies roles advertised by the discovery system. It is **not** the GTS Canonical Service Selector namespace and its 16-bit values are not carried in GTS CONNECT.
 
 | Value | Service |
 |---:|---|
@@ -30,4 +31,4 @@ Status: **DRAFT allocations**
 | 0x0008 | Session/Reservation Server |
 | 0xFFFF | Experimental |
 
-A service number identifies a protocol role, not one vendor product or host name.
+A discovery service type identifies a protocol role, not one vendor product or host name. A discovered endpoint may separately publish a [[Canonical Service Selector]] used by GTS to select the actual service when opening a tunnel.
