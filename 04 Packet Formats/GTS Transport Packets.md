@@ -7,8 +7,8 @@ status: frozen
 layers: ["L4","L5"]
 tags: ["gnet","gnet/packet","gnet/status/frozen","gnet/layer/l4","gnet/layer/l5"]
 parent: "[[Packet Formats MOC]]"
-related: ["[[GTS Protocol]]","[[ADR-0005 Tunnels and Streams]]","[[GDP Datagram]]"]
-updated: 2026-09-10
+related: ["[[GTS Protocol]]","[[Canonical Service Selector]]","[[ADR-0005 Tunnels and Streams]]","[[GDP Datagram]]"]
+updated: 2026-09-14
 ---
 # GTS transport packets
 
@@ -25,9 +25,9 @@ The GTS Type is the low four bits of the first GTS byte; the high four bits are 
 | Type | Name | Meaning |
 |---:|---|---|
 | `0x0` | RESERVED | invalid/unassigned |
-| `0x1` | CONNECT | create tunnel and Stream 0 |
+| `0x1` | CONNECT | select service, create tunnel and Stream 0 |
 | `0x2` | CONNECT_ACK | accept/reject CONNECT and return responder state |
-| `0x3` | STREAM_OPEN | create an additional stream |
+| `0x3` | STREAM_OPEN | create an additional stream in the existing service-bound tunnel |
 | `0x4` | STREAM_ACK | accept/reject STREAM_OPEN |
 | `0x5` | DATA | ordinary full DATA unit |
 | `0x6` | ACK | cumulative + selective acknowledgement and receive credit |
@@ -66,7 +66,7 @@ CRC-32                4 B
 
 Fixed overhead is 14 bytes. Sequence numbers identify DATA packets, not byte offsets, and are interpreted modulo `2^32` independently for each stream.
 
-DATA does not carry acknowledgement state, receive credit, service selector, Reset ID, source Tunnel ID, QoS, flags, or payload length.
+DATA does not carry acknowledgement state, receive credit, CSS, Reset ID, source Tunnel ID, QoS, flags, or payload length.
 
 ## DATA_END packet
 
@@ -124,7 +124,13 @@ A retransmission timeout remains mandatory. The initial profile uses an adaptive
 
 ## CONNECT
 
-CONNECT creates a tunnel and simultaneously creates Stream 0. The initiator chooses an even Stream ID namespace and Stream 0 belongs to the initiator.
+CONNECT performs three operations together:
+
+1. selects exactly one logical service using CSS;
+2. creates a tunnel bound to that service;
+3. creates Stream 0 inside that tunnel.
+
+The initiator owns the even Stream ID namespace and Stream 0 is created immediately by CONNECT.
 
 CONNECT layout:
 
@@ -136,8 +142,8 @@ Initiator Receive Tunnel  4 B
 Initiator Reset ID        4 B
 Stream-0 Size Class       1 B
 Initial Receive Credit    1 B
-Selector Class/Reserved   1 B
-Service Selector          variable
+CSS Representation/Res.   1 B
+CSS Selector              1/4/16 B
 Padding                   P
 CRC-32                    4 B
 ```
@@ -150,9 +156,58 @@ CRC-32                    4 B
 
 `Initial Receive Credit` advertises how many Stream-0 DATA packets the initiator can initially accept from the responder.
 
-`Selector Class/Reserved` uses the top two bits for the Service Selector class and the low six bits as zero/reserved. The selector field immediately follows and has the length implied by the selector class.
+### CSS representation byte
+
+`CSS Representation/Reserved` is:
+
+```text
+bits 7..6   CSS Representation
+bits 5..0   Reserved = 0
+```
+
+The representation determines the selector field immediately following it:
+
+| Bits | Name | Selector bytes | Expansion |
+|---:|---|---:|---|
+| `00` | Registered-8 | 1 | registry code -> Short-32 -> CSS128 |
+| `01` | Short-32 | 4 | four ASCII bytes -> high 32 bits of CSS128, low 96 bits zero |
+| `10` | Full-128 | 16 | complete CSS128 value |
+| `11` | Reserved | — | invalid in this profile |
+
+The complete rules are defined by [[Canonical Service Selector]].
+
+All forms identify values in **one 128-bit canonical CSS namespace**. They are not different service namespaces.
+
+Registered-8 uses [[CSS Registered Service Registry]]. For example:
+
+```text
+-FILE
+    wire Registered-8 = 0x01
+    Short-32          = 0x46494C45
+    CSS128            = 46494C45000000000000000000000000
+```
+
+Short-32 example:
+
+```text
+#CAPI
+    wire Short-32 = 43 41 50 49
+    CSS128        = 43415049000000000000000000000000
+```
+
+Full-128 example:
+
+```text
+0123456789ABCDEF0123456789ABCDEF
+```
+
+The shortest available representation is mandatory. A registered service MUST use Registered-8 rather than Short-32 or Full-128. A non-registered service representable by valid Short-32 MUST use Short-32 rather than Full-128.
+
+A receiver expands the selector to CSS128 before service lookup. A non-canonical longer representation SHOULD be rejected as malformed.
 
 The CONNECT packet itself has no destination Tunnel ID because no responder-local tunnel exists yet. GDP source/destination addressing identifies the two endpoints.
+
+On acceptance, the resulting tunnel is bound to the canonical CSS for its lifetime. Every stream created in that tunnel belongs to the same selected service.
 
 ## CONNECT_ACK
 
@@ -185,7 +240,7 @@ Initial Status values:
 | `0` | accepted |
 | `1` | service unavailable |
 | `2` | resource unavailable |
-| `3` | unsupported selector |
+| `3` | unsupported, malformed, or non-canonical CSS |
 | `4` | unsupported Stream-0 Size Class |
 | `5` | administratively rejected |
 | `6`-`255` | reserved |
@@ -201,6 +256,8 @@ Stream IDs are 8 bits with parity ownership:
 - Stream 0 is created by CONNECT.
 
 An endpoint MUST NOT allocate a Stream ID owned by the peer's parity.
+
+Additional streams belong to the CSS selected by CONNECT. STREAM_OPEN does not carry a selector and cannot switch the tunnel to another service.
 
 ### STREAM_OPEN
 
@@ -250,6 +307,8 @@ Initial Status values:
 
 On acceptance, `Initial Receive Credit` is the responder's initial receive credit for the stream. On rejection it is zero.
 
+Selecting another CSS requires another CONNECT and therefore another tunnel.
+
 ## Graceful stream close
 
 `STREAM_CLOSE` is directional and states that the sender will transmit no more DATA/DATA_END in that direction.
@@ -261,7 +320,7 @@ Version/Type          1 B
 Tunnel ID             4 B
 Stream ID             1 B
 Final Sequence        4 B
-Padding               P
+Padding                P
 CRC-32                4 B
 ```
 
@@ -276,7 +335,7 @@ Version/Type          1 B
 Tunnel ID             4 B
 Stream ID             1 B
 Final Sequence        4 B
-Padding               P
+Padding                P
 CRC-32                4 B
 ```
 
@@ -317,7 +376,7 @@ Version/Type          1 B
 Tunnel ID             4 B
 Reset ID              4 B
 Reason                1 B
-Padding               P
+Padding                P
 CRC-32                4 B
 ```
 
@@ -380,25 +439,25 @@ For Global GDP, effective addresses are the transmitted 64-bit addresses. For Lo
 
 A failed CRC causes the packet to be discarded and treated as not received.
 
-## Service Selector
+## Canonical Service Selector summary
 
-Service selection is setup-only. The initial selector classes remain:
+The selector carried by CONNECT follows [[Canonical Service Selector]]. Canonical presentation examples are:
 
-| Class | Selector field | Meaning |
-|---:|---:|---|
-| `00` | 8 bits | numeric registered service code |
-| `01` | 32 bits | short textual selector |
-| `10` | 128 bits | long/private textual selector |
-| `11` | reserved | future expansion |
+```text
+<GDP-address>:-FILE
+<GDP-address>:-GRPC
+<GDP-address>:#CAPI
+<GDP-address>:#MYEP
+<GDP-address>:0123456789ABCDEF0123456789ABCDEF
+```
 
-The exact textual alphabet/packing remains a separate registry-format decision; it does not change the control packet envelope above.
+The GDP address identifies the endpoint. CSS identifies the service at that endpoint. CSS is not repeated in DATA, ACK, STREAM_OPEN, or other ordinary established-tunnel packets.
 
 ## Remaining initial-profile work
 
-The core wire layouts and state transitions are now frozen. Remaining work is limited to:
+The core wire layouts, CSS representation, and state transitions are frozen. Remaining work is limited to:
 
 - exact delayed-ACK timer and adaptive-RTO integer constants/bounds;
 - exact stale-state timing profiles beyond the minimum rule;
-- textual Service Selector alphabet/packing;
 - malformed-control-packet reason mapping where not already covered by GCTL;
-- golden packet/CRC vectors and conformance tests.
+- golden packet/CRC/conformance vectors.
