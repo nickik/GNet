@@ -6,8 +6,8 @@ type: overview
 status: active
 layers: ["L1","L2","L3","L4","L5","L6","L7"]
 tags: ["gnet","gnet/overview","gnet/architecture"]
-related: ["[[Specification Status]]","[[GDP Protocol]]","[[GTS Protocol]]","[[GCTL Protocol]]","[[Direct Link Protocol]]"]
-updated: 2026-09-13
+related: ["[[Specification Status]]","[[GDP Protocol]]","[[GTS Protocol]]","[[Canonical Service Selector]]","[[GCTL Protocol]]","[[Direct Link Protocol]]"]
+updated: 2026-09-14
 ---
 # GNet Protocol Suite Overview
 
@@ -52,7 +52,7 @@ The OSI mapping is approximate. GNet follows the same separation of concerns, bu
 |---|---|---|
 | L7 Application | GTerm, file, boot, RPC, voice, other services | application semantics |
 | L6 Presentation / naming | directory, identity, service naming | names, service discovery, representation, identity |
-| L5 Session | GTS tunnel control | tunnel establishment, reset/close, service selection, stream creation |
+| L5 Session | GTS tunnel control + CSS | service selection, tunnel establishment, reset/close, stream creation |
 | L4 Transport | GTS | sequencing, acknowledgement, retransmission, receive flow control, end-to-end integrity |
 | L3 Network | GDP + GCTL | addressing, routing, hop limit, packet sizing, errors, diagnostics, discovery/control |
 | L2 Data link | DLP + hop-local VC state | carried flits, bounded local transfer state, link backpressure relationship |
@@ -67,8 +67,8 @@ A useful comparison for TCP/IP readers is:
 | ICMP plus parts of bootstrap/management | GCTL | GCTL is broader and also carries link-local credit control on the normal data path |
 | TCP | GTS | GTS uses tunnels containing multiple streams rather than repeating TCP-style ports in every data packet |
 | UDP | no frozen direct equivalent yet | initial GTS is reliable/ordered |
-| TCP/UDP ports | GTS Service Selector + Tunnel ID + Stream ID | service is selected during setup; ordinary data identifies the established tunnel/stream |
-| DNS/service discovery | GNet directory/service model | exact directory protocol remains under design |
+| TCP/UDP ports | Canonical Service Selector + Tunnel ID + Stream ID | CSS selects a service only during CONNECT; ordinary data identifies the established tunnel/stream |
+| DNS/service discovery | GNet directory/service model | directory names resolve to GDP address + CSS; exact directory protocol remains under design |
 
 ---
 
@@ -469,7 +469,7 @@ Stream ID        8 bits, tunnel-scoped
 Packet Sequence 32 bits, stream-scoped
 ```
 
-A CONNECT exchange creates the tunnel and Stream 0. Additional streams use STREAM_OPEN/STREAM_ACK.
+A CONNECT exchange selects one CSS, creates a service-bound tunnel, and creates Stream 0. Additional streams use STREAM_OPEN/STREAM_ACK and remain inside that same selected service.
 
 ### DATA
 
@@ -510,33 +510,63 @@ See [[GTS Protocol]] and [[GTS Transport Packets]].
 
 ---
 
-## 13. Services instead of per-packet ports
+## 13. Canonical Service Selector: services instead of per-packet ports
 
 GTS deliberately separates **service selection** from ordinary transport demultiplexing.
 
-A service is selected during setup using a Service Selector. Once the tunnel/stream exists, ordinary DATA packets use Tunnel ID and Stream ID and do not repeat a source/destination port pair in every packet.
+A service is selected once, in CONNECT, using the **Canonical Service Selector (CSS)**. If CONNECT succeeds, the tunnel is bound to that service for its lifetime. Ordinary DATA packets use Tunnel ID and Stream ID and do not repeat a source/destination port pair or CSS in every packet.
 
-Current selector classes are:
+CSS is one **128-bit canonical service namespace** with three wire representations:
 
-| Class | Representation | Intended use |
-|---:|---|---|
-| 0 | 8-bit registered service code | common services / small systems |
-| 1 | 4-character ASCII selector | compact named services |
-| 2 | 16-character ASCII/private selector | sparse/private services |
-| 3 | reserved | future use |
+| Representation | Wire size | Example | Meaning |
+|---|---:|---|---|
+| Registered-8 | 8 bits | `-FILE`, `-GRPC` | registered compressed form |
+| Short-32 | 32 bits | `#CAPI`, `#MYEP` | exactly four ASCII characters |
+| Full-128 | 128 bits | `0123456789ABCDEF0123456789ABCDEF` | complete canonical value |
 
-A directory service can map a human-facing service name to one or more GDP addresses and a Service Selector. The exact global directory/naming protocol is still open.
+They are not separate namespaces.
+
+Short-32 occupies the most-significant 32 bits of CSS128 and the low 96 bits are zero:
+
+```text
+#CAPI
+    32-bit value = 0x43415049
+    CSS128       = 43415049000000000000000000000000
+```
+
+Registered-8 expands through the global registry to a Short-32 mnemonic and then to the same CSS128 form:
+
+```text
+-FILE
+    Registered-8 = 0x01
+    Short-32     = 0x46494C45   "FILE"
+    CSS128       = 46494C45000000000000000000000000
+```
+
+The shortest available representation is canonical. Because `FILE` is registered, `#FILE` is not a second service identity and is not the canonical wire encoding.
+
+An endpoint plus service may be written as:
+
+```text
+<GDP-address>:-FILE
+<GDP-address>:#CAPI
+<GDP-address>:0123456789ABCDEF0123456789ABCDEF
+```
 
 This produces four distinct identifiers with different jobs:
 
 ```text
 GDP address      where is the endpoint?
-Service Selector what service is requested?
+CSS              what service is requested?
 Tunnel ID        which established transport association?
 Stream ID        which stream inside that tunnel?
 ```
 
-See [[GNet Service Model]].
+A directory service can map a human-facing service name to one or more `GDP address + CSS` pairs. The exact global directory/naming protocol is still open.
+
+STREAM_OPEN does not contain CSS. It creates another stream inside the already service-bound tunnel. Selecting a different service requires another CONNECT and another tunnel.
+
+See [[Canonical Service Selector]], [[CSS Registered Service Registry]], and [[GNet Service Model]].
 
 ---
 
@@ -546,8 +576,8 @@ Consider an application sending reliable data to a remote service.
 
 ### At the sender
 
-1. The application selects a destination service.
-2. If necessary, GTS performs CONNECT and establishes receiver-local Tunnel IDs.
+1. The application obtains a destination GDP address and CSS, directly or through a directory.
+2. If necessary, GTS sends CONNECT carrying the CSS; successful CONNECT establishes receiver-local Tunnel IDs and Stream 0 bound to that service.
 3. GTS creates a DATA packet containing Tunnel ID, Stream ID, Sequence, application data, and CRC-32.
 4. GDP wraps that GTS packet, sets Type=`GTS`, chooses an appropriate Size Class, supplies Source/Destination, and calculates the GDP header CRC-8.
 5. The link data path carries the GDP bits as 32-bit words inside VC-tagged physical flits.
@@ -568,14 +598,15 @@ Because the destination is early in the GDP header and forwarding is flit-orient
 1. GDP validates/delivers the packet according to Type.
 2. Type=`GTS` sends the payload to GTS.
 3. GTS validates its CRC-32.
-4. Tunnel ID and Stream ID select the transport state.
-5. Sequence/ACK logic provides ordered reliable delivery to the application.
+4. Tunnel ID and Stream ID select the already service-bound transport state.
+5. Sequence/ACK logic provides ordered reliable delivery to the selected service.
 
 The important layering is therefore:
 
 ```text
 link state is hop-local
 routing state is packet/network-local
+service selection happens at tunnel setup
 transport state is end-to-end
 application state stays above transport
 ```
@@ -608,7 +639,7 @@ Tunnel IDs, stream sequences, ACKs, retransmission timers, and application servi
 
 ### No mandatory TCP-style ports in every packet
 
-Services are selected during setup; established traffic uses tunnel and stream identifiers.
+CSS selects the service during CONNECT. Established traffic uses tunnel and stream identifiers, so service identity is not repeated in every DATA packet.
 
 ---
 
@@ -635,7 +666,7 @@ If only five ideas are remembered, they should be these:
 1. **GDP is the routed datagram layer.** It is the GNet equivalent of the network layer, with 64-bit Global addresses and compact 16-bit Local representation.
 2. **The wire moves 32-bit carried words as small VC-tagged flits.** This enables cut-through/wormhole-style forwarding and small intermediate buffers.
 3. **Flow control is hop-local.** Credits describe actual receive capacity at the next forwarding endpoint; they are not end-to-end transport windows.
-4. **GTS owns end-to-end reliability.** Tunnels contain streams, and GTS supplies sequencing, selective acknowledgement, retransmission, receive flow control, and CRC-32.
+4. **GTS owns end-to-end reliability and CSS selects the service.** CONNECT binds one service to a tunnel; the tunnel then contains independently sequenced streams.
 5. **The layers protect different things.** GDP CRC-8 protects routing/header information; GTS protects transport content; applications can define additional semantics as required.
 
 From there, the detailed specifications are:
@@ -645,5 +676,6 @@ From there, the detailed specifications are:
 - [[GDP Protocol]] / [[GDP Datagram]]
 - [[GCTL Protocol]]
 - [[GTS Protocol]] / [[GTS Transport Packets]]
+- [[Canonical Service Selector]] / [[CSS Registered Service Registry]]
 - [[Addressing and Routing]]
 - [[GNet Service Model]]
