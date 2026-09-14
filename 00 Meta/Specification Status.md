@@ -38,6 +38,11 @@ This repository is the canonical working specification for GNet. It is coherent 
 - `FE80::/16` is the reserved non-routable link-local GDP prefix; clients generate their own 48-bit suffixes.
 - CSS is one canonical 128-bit service namespace. GTS CONNECT carries its shortest canonical representation: Registered-8, Short-32, or Full-128. Short-32 occupies the high 32 bits of CSS128 with the low 96 bits zero.
 - A successful GTS CONNECT binds one CSS to the tunnel and creates Stream 0. STREAM_OPEN creates additional streams inside that same service-bound tunnel and does not select another service.
+- Every GTS stream independently selects reliable/unreliable delivery and fixed/variable packet sizing through one Stream Parameters byte.
+- GTS defines four baseline profiles: Reliable Fixed, Reliable Variable, Unreliable Fixed, and Unreliable Variable. Stream 0 may use any of them and one tunnel may mix profiles across streams.
+- Reliable streams use packet sequence numbers, selective ACK, retransmission and GTS Receive Credit. Variable reliable streams add Valid Length while retaining packet-based ACK semantics.
+- Unreliable streams use `DATAGRAM` (`0xD`) with no GTS sequence number, ACK, retransmission, ordering, duplicate suppression, loss detection, or GTS Receive Credit. Variable unreliable DATAGRAM adds Valid Length.
+- Baseline GTS still uses CRC-32 end-to-end for both reliable DATA and unreliable DATAGRAM packets. Header-only integrity for unreliable media remains an open extension decision.
 
 ## ACCEPTED product/profile direction
 
@@ -63,7 +68,7 @@ GNET-A remains a separate centrally scheduled residential-access family. GNET-P 
 - GNet-20 bonded-lane/in-band-control encoding.
 - Final GNET-P control/framing and commercial name separation from LAN GNet-10.
 - GCTL bootstrap addressing/encodings and full routing protocol.
-- GTS transport algorithms and application protocols.
+- GTS reliable-stream timing constants, congestion-control behavior, integrity-profile extensions, and application protocols.
 
 ## Interpretation rule
 
