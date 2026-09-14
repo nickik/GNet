@@ -3,56 +3,92 @@ id: address-configuration-packets
 title: "Address Configuration Packets"
 aliases: ["ADDRESS_OFFER","ADDRESS_CLAIM"]
 type: packet
-status: draft
+status: frozen
 layers: ["L3"]
-tags: ["gnet","gnet/packet","gnet/status/draft","gnet/layer/l3"]
+tags: ["gnet","gnet/packet","gnet/status/frozen","gnet/layer/l3"]
 parent: "[[Packet Formats MOC]]"
-related: ["[[GCTL Protocol]]","[[Discovery and Bootstrap]]","[[Addressing and Routing]]"]
-updated: 2026-09-03
+related: ["[[GCTL Protocol]]","[[Discovery and Bootstrap]]","[[Addressing and Routing]]","[[ADR-0019 GCTL Credit and Bootstrap Wire Profile]]"]
+updated: 2026-09-14
 ---
 # Address-configuration packets
 
-Status: **DRAFT — semantics retained; old direct-DLP flit packing superseded**
+Status: **FROZEN for GNet 0.1**
 
-Address configuration occurs after GLCP link establishment and router discovery. GCTL carries the network-level offer/claim/result exchange using the provisional/link-local GDP bootstrap rules.
+Address configuration occurs after link establishment and router discovery. GCTL carries the offer/claim/result exchange on the normal GDP data path.
 
-## ADDRESS_OFFER semantics
+All multi-byte values use network byte order. The first 8 bytes are the normal GCMP common header.
 
-A router supplies at least:
+## ADDRESS_OFFER (`0x10`)
 
-```text
-Transaction ID
-Router identity/address
-Delegated/offered prefix
-Prefix length
-Candidate client address within that prefix
-Lifetime
-```
-
-For the accepted GNet 0.1 on-link prefix profile, Prefix Length is one of `/16`, `/32`, `/48`, or `/56`. The prefix MUST be normalized (all suffix bits zero), and the candidate address MUST match it. The remaining bits are router-managed endpoint space; there is no endpoint subnet delegation or separate local-suffix policy in 0.1.
-
-## ADDRESS_CLAIM semantics
-
-A client supplies at least:
+Body:
 
 ```text
-Transaction ID
-Candidate address supplied in ADDRESS_OFFER
-Client nonce/claim identifier
+Router Address    8 bytes
+Prefix            8 bytes
+Prefix Length     1 byte
+Reserved          3 bytes = 0
+Candidate Address 8 bytes
+Lifetime          4 bytes
 ```
 
-## ADDRESS_ACK / ADDRESS_NAK semantics
+The Transaction ID is carried in the GCMP common header.
 
-The router returns:
+For GNet 0.1, Prefix Length MUST be one of `/16`, `/32`, `/48`, or `/56`.
+
+The Prefix MUST be normalized, with all suffix bits zero. Candidate Address MUST lie inside Prefix.
+
+The remaining host bits are router-managed endpoint space; there is no endpoint subnet delegation or separate local-suffix policy in GNet 0.1.
+
+## ADDRESS_CLAIM (`0x11`)
+
+Body:
 
 ```text
-Transaction ID
-candidate/confirmed address
-result/reason
-lifetime
-retry delay when applicable
+Candidate Address 8 bytes
+Claim Nonce       8 bytes
 ```
 
-Physical port identity may bind the transaction to the directly attached client but is not a global MAC address.
+The Claim Nonce is client-selected and scoped to this bootstrap exchange. It is not a permanent machine identity.
 
-The earlier 4-bit-VCID/28-carried-bit direct-DLP diagrams are obsolete. Exact GCTL widths, collision policy, lease persistence, multi-router coordination, renumbering, and authentication binding remain OPEN.
+The claimed address MUST match the address supplied in the corresponding ADDRESS_OFFER Transaction ID.
+
+## ADDRESS_ACK (`0x12`)
+
+Body:
+
+```text
+Confirmed Address 8 bytes
+Lifetime          4 bytes
+```
+
+The confirmed address MUST match the address offered and claimed for the Transaction ID.
+
+## ADDRESS_NAK (`0x13`)
+
+Body:
+
+```text
+Candidate Address 8 bytes
+Retry Delay       4 bytes
+```
+
+The common GCMP `Code` field carries the rejection reason.
+
+## Padding
+
+Remaining bytes in the selected GDP Size Class are zero padding and MUST be transmitted as zero. Receivers MUST reject nonzero padding for these frozen typed messages.
+
+## Binding and policy
+
+Physical port identity may bind a transaction to a directly attached client but is not a global MAC address.
+
+The following remain policy/state-machine concerns rather than changes to this packet format:
+
+- lease persistence;
+- collision policy among multiple authorities;
+- multi-router coordination;
+- renumbering;
+- authentication binding;
+- authorization policy.
+
+The earlier four-bit-VCID / 28-carried-bit direct-DLP diagrams are obsolete.
