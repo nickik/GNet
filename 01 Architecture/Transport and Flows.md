@@ -7,82 +7,98 @@ status: mixed
 layers: ["L4","L5"]
 tags: ["gnet","gnet/architecture","gnet/status/mixed","gnet/layer/l4","gnet/layer/l5"]
 parent: "[[Architecture MOC]]"
-related: ["[[GTS Protocol]]","[[GTS Transport Packets]]","[[Canonical Service Selector]]","[[Virtual Channels and VCIDs]]","[[ADR-0005 Tunnels and Streams]]"]
+related: ["[[GTS Protocol]]","[[GTS Transport Packets]]","[[GTS Stream Profiles]]","[[Canonical Service Selector]]","[[Virtual Channels and VCIDs]]","[[ADR-0005 Tunnels and Streams]]"]
 updated: 2026-09-14
 ---
 # Transport, sessions, and reserved flows
 
-> [!info] Knowledge graph
-> **Up:** [[Architecture MOC]] · **Related:** [[GTS Protocol]] · [[GTS Transport Packets]] · [[Canonical Service Selector]] · [[Virtual Channels and VCIDs]] · [[ADR-0005 Tunnels and Streams]]
+Status: **FROZEN initial packet-routed transport identity and stream profiles; selected timing constants remain open**
 
-Status: **FROZEN initial traditional packet-routed transport identity; selected timing constants remain open**
-
-GDP provides routed datagrams and only header integrity. The initial GTS profile above it provides reliable ordered streams and mandatory end-to-end CRC protection.
+GDP provides routed datagrams and header integrity. GTS adds service-bound tunnels containing multiple streams whose reliability and packet-size behavior are selected independently.
 
 ## Tunnel and stream model
 
-GTS first establishes a tunnel. The initial profile freezes:
+The initial profile freezes:
 
 - 32-bit receiver-local Tunnel IDs;
 - 32-bit receiver-local Reset IDs;
 - 8-bit Stream IDs scoped within one tunnel;
 - service selection in CONNECT only;
 - Stream 0 created by CONNECT;
+- CONNECT initiator owns even Stream IDs, responder owns odd Stream IDs;
 - traditional packet-by-packet GDP routing with no flow-ID routing dependency.
 
-Each endpoint allocates the Tunnel ID that the peer uses when sending to it. Ordinary GTS packets therefore carry the receiver's local Tunnel ID, not a globally unique connection identifier and not a source/destination pair of Tunnel IDs.
-
-Stream IDs multiplex reliable ordered data streams within one tunnel. The CONNECT initiator owns even Stream IDs, the responder owns odd Stream IDs, and Stream 0 is created as part of CONNECT.
+Each endpoint allocates the Tunnel ID that the peer uses when sending to it. Ordinary GTS packets carry only the receiver's local Tunnel ID rather than a globally unique connection identifier or source/destination Tunnel-ID pair.
 
 ## Service binding
 
-Service identity is separate from transport identity. GTS does not require TCP-style source/destination ports.
+CONNECT carries one [[Canonical Service Selector]] (CSS). If CONNECT succeeds, the tunnel is bound to that canonical service identity for its lifetime. Additional STREAM_OPEN operations create streams inside the same service-bound tunnel and do not carry CSS.
 
-CONNECT carries exactly one [[Canonical Service Selector]] (CSS). If CONNECT succeeds, the resulting tunnel is bound to that canonical service identity for its lifetime.
+Ordinary established traffic therefore uses Tunnel ID + Stream ID rather than repeating a TCP-style source/destination service port pair.
 
-CSS has one 128-bit canonical namespace with three wire representations:
+## Stream profiles
 
-- Registered-8: 8-bit registered compressed form such as `-FILE`;
-- Short-32: four-character form such as `#CAPI`;
-- Full-128: complete 128-bit CSS value.
-
-Registered-8 and Short-32 expand into the same canonical CSS128 namespace. The shortest available representation is canonical.
-
-Additional STREAM_OPEN operations do not contain a CSS and cannot select another service. They create more streams inside the already service-bound tunnel. Selecting another service requires a separate GTS tunnel.
-
-Ordinary DATA therefore needs only:
+Every stream has two independent profile bits:
 
 ```text
-receiver-local Tunnel ID
-Stream ID
-Sequence
-payload
-CRC
+Unreliable = 0/1
+Variable   = 0/1
 ```
 
-and does not repeat service identity.
+producing four baseline profiles:
 
-## Reliability baseline
+| Profile | Delivery | Packet size | GTS ACK/retransmit |
+|---|---|---|---|
+| Reliable Fixed | reliable ordered | one exact GDP Size Class | yes |
+| Reliable Variable | reliable ordered | per-packet class up to a negotiated maximum | yes |
+| Unreliable Fixed | independent datagrams | one exact GDP Size Class | no |
+| Unreliable Variable | independent datagrams | per-packet class up to a negotiated maximum | no |
 
-The initial profile is reliable and ordered. Unreliable stream modes are deferred.
+Stream 0 may use any of the four profiles. A single tunnel may mix profiles across its streams.
 
-GTS uses packet-oriented 32-bit sequence numbers rather than byte sequence numbers. ACK uses a cumulative base plus a 32-bit selective bitmap and explicit receive credit. Retransmission timeout remains adaptive from measured RTT; exact estimator constants and bounds remain to be frozen separately.
+The common Stream Parameters byte is:
+
+```text
+bit  7      Unreliable
+bit  6      Variable
+bits 5..4   Reserved = 0
+bits 3..0   Size Class
+```
+
+For Fixed streams, Size Class is exact. For Variable streams, it is the maximum allowed class.
+
+## Reliable streams
+
+Reliable streams use 32-bit packet-oriented sequence numbers, not byte sequence numbers. ACK uses a cumulative base, a 32-bit selective bitmap, and receive credit.
+
+Reliable Variable DATA adds a 16-bit Valid Length because the chosen GDP Size Class may be larger than the application data carried in that packet. Packet numbering and ACK semantics remain unchanged regardless of packet size.
+
+Receive Credit remains packet-based. On Reliable Variable streams, one credit guarantees capacity for one packet up to the negotiated maximum Size Class.
+
+## Unreliable streams
+
+Unreliable streams use GTS `DATAGRAM` packets. They have no GTS sequence number, acknowledgement, retransmission, duplicate suppression, ordering, or transport receive credit.
+
+Unreliable Fixed DATAGRAM uses the stream's exact GDP Size Class. Unreliable Variable DATAGRAM adds Valid Length and may choose any class up to the stream maximum.
+
+Applications that need media timestamps, sequence numbers, epochs, or loss detection carry those semantics themselves.
+
+Lower-layer GNet hop-local credit/backpressure still applies; removing GTS Receive Credit does not allow one physical/link endpoint to overrun another.
 
 ## Integrity
 
-Traditional GTS packets use mandatory CRC-32 end to end. The tiny CRC-8 rule is retained only for a future compact GTS representation capable of fitting the 0-byte/3-byte GDP classes. Ordinary 32-bit-Tunnel/8-bit-Stream GTS cannot fit those tiny classes.
+The current baseline retains CRC-32-GNET for both reliable DATA and unreliable DATAGRAM packets. A CRC failure is discarded; reliable delivery can recover through retransmission, while an unreliable datagram is simply lost.
 
-GTS CRC binds the complete GTS header/payload to the canonical effective GDP source/destination endpoints and GDP Size Class. Local GDP address representations must expand to the same effective endpoint identities before CRC calculation.
+A possible future **header-only integrity profile for unreliable media** is still open. Completely unchecked GTS headers are not currently defined.
 
 ## Deferred features
 
-The initial traditional packet-routed profile does not require:
+The baseline still does not require:
 
-- flow-ID/virtual-circuit based routing optimization;
+- flow-ID/virtual-circuit routing optimization;
 - multicast/group transport;
-- unreliable streams;
 - end-to-end congestion control;
 - dynamic route exchange;
 - cryptographic security.
 
-These may be added later without changing the basic GDP packet-routed baseline.
+See [[GTS Stream Profiles]] and [[GTS Transport Packets]] for normative details.
