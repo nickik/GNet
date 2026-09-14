@@ -12,177 +12,203 @@ updated: 2026-09-14
 ---
 # GTS stream profiles
 
-Status: **FROZEN reliability and packet-size profile model**
+Status: **FROZEN extended stream-profile model**
 
-Every GTS stream has two independent properties:
+Every GTS stream has a 16-bit Stream Profile. The profile independently selects reliability, packet sizing, optional sequencing for unreliable traffic, payload CRC coverage, direction, and GDP Size Class.
 
-1. delivery mode: **reliable** or **unreliable**;
-2. packet-size mode: **fixed** or **variable**.
-
-This creates exactly four baseline stream profiles:
-
-| Unreliable | Variable | Profile | Data packet | GTS ACK/retransmit |
-|---:|---:|---|---|---|
-| `0` | `0` | Reliable Fixed | `DATA` | yes |
-| `0` | `1` | Reliable Variable | `DATA` + Valid Length | yes |
-| `1` | `0` | Unreliable Fixed | `DATAGRAM` | no |
-| `1` | `1` | Unreliable Variable | `DATAGRAM` + Valid Length | no |
-
-A tunnel may contain streams using different profiles. Stream 0, created by CONNECT, may use any baseline profile.
-
-## Stream Parameters byte
-
-CONNECT and STREAM_OPEN carry one `Stream Parameters` byte:
+## Stream Profile
 
 ```text
-bit  7      Unreliable
-bit  6      Variable
-bits 5..4   Reserved = 0
+bit 15      Unreliable
+bit 14      Variable
+bit 13      Sequenced
+bit 12      Unchecked Payload
+bits 11..10 Direction
+bits 9..4   Reserved = 0
 bits 3..0   Size Class
 ```
 
-Semantics:
+### Reliability and sizing
 
 ```text
-Unreliable = 0   reliable ordered stream
-Unreliable = 1   unreliable datagram stream
+Unreliable = 0   reliable ordered message delivery
+Unreliable = 1   unreliable datagram delivery
 
 Variable   = 0   Size Class is exact for every data packet
 Variable   = 1   Size Class is the maximum allowed class; each packet chooses its class
 ```
 
-Keeping both high bits zero therefore preserves the original reliable-fixed interpretation.
+This retains the four baseline combinations:
 
-## Reliable Fixed
+| Unreliable | Variable | Profile |
+|---:|---:|---|
+| `0` | `0` | Reliable Fixed |
+| `0` | `1` | Reliable Variable |
+| `1` | `0` | Unreliable Fixed |
+| `1` | `1` | Unreliable Variable |
 
-Reliable Fixed is the original GTS data profile.
+Stream 0 may use any valid profile. One tunnel may mix different profiles across streams.
 
-Every DATA/DATA_END packet uses the exact GDP Size Class negotiated for the stream. Ordinary DATA carries no Valid Length because the stream profile plus GDP Size Class determines the application-data capacity.
+## Message preservation
 
-Reliable Fixed uses:
+GTS is message-preserving.
+
+One DATA, DATA_END, or DATAGRAM packet carries one application message unit. Reliable delivery preserves both message order and message boundaries. GTS does not merge adjacent application messages into a byte stream and does not split one GTS message across multiple GTS data packets in the baseline profile.
+
+Operating systems and libraries MAY expose a conventional byte-stream API by concatenating delivered reliable messages. That API adaptation does not change the GTS wire semantics.
+
+Applications that need explicit record/message boundaries can therefore use GTS directly without reconstructing boundaries above transport.
+
+## Direction
+
+Direction is relative to the endpoint that opens the stream:
+
+```text
+00   reserved / invalid
+01   opener -> peer only
+10   peer -> opener only
+11   bidirectional
+```
+
+For Stream 0, the opener is the CONNECT initiator. For later streams, the opener is the sender of STREAM_OPEN.
+
+Direction restricts application DATA/DATAGRAM transmission only. ACK, STREAM_CLOSE, STREAM_CLOSE_ACK, STREAM_RESET, STREAM_RESET_ACK and other transport control packets may travel as required regardless of the application-data direction.
+
+## Reliable streams
+
+Reliable streams use:
 
 - 32-bit packet sequence numbers;
+- reliable ordered message delivery;
 - cumulative/selective ACK;
 - receive credit;
-- retransmission;
+- selective retransmission;
 - adaptive retransmission timeout;
-- mandatory end-to-end integrity.
+- full end-to-end CRC-32 coverage.
 
-## Reliable Variable
+`Sequenced` MUST be zero on reliable streams because reliable streams are inherently sequenced.
 
-Reliable Variable retains the same packet-oriented sequencing and ACK model but permits each DATA/DATA_END packet to choose any GDP Size Class not larger than the stream's negotiated maximum.
+`Unchecked Payload` MUST be zero on reliable streams.
 
-Ordinary DATA therefore includes a 16-bit `Valid Length`:
+### Reliable Fixed
 
-```text
-Version/Type          1 B
-Tunnel ID             4 B
-Stream ID             1 B
-Sequence              4 B
-Valid Length          2 B
-Data                   N
-Padding                P
-CRC-32                4 B
-```
+Every DATA packet uses the exact negotiated GDP Size Class. Ordinary DATA carries no Valid Length; the packet capacity is implied by the stream profile and GDP Size Class.
 
-`Valid Length` gives the number of meaningful application bytes after the field. Remaining bytes before CRC are zero padding.
+DATA_END may carry a shorter final message using Valid Length.
 
-Packet sequence numbers still count packets, not bytes. Different packet sizes therefore do not change ACK numbering.
+### Reliable Variable
 
-Receive Credit remains packet-count based. One advertised credit on a Reliable Variable stream guarantees capacity for one packet up to the negotiated maximum Size Class. This deliberately favors simple bounded accounting over byte-granular receive windows.
+Each DATA packet may use any GDP Size Class not greater than the negotiated maximum. DATA carries a 16-bit Valid Length. Remaining bytes before CRC are zero padding.
 
-## Unreliable Fixed
+Receive Credit remains packet-count based. One credit guarantees capacity for one message packet up to the negotiated maximum Size Class.
 
-Unreliable Fixed carries independent application datagrams using one exact GDP Size Class.
+## Unreliable streams
 
-It uses GTS packet type `DATAGRAM` and has no sequence field:
+Unreliable streams use DATAGRAM and have:
 
-```text
-Version/Type          1 B
-Tunnel ID             4 B
-Stream ID             1 B
-Data                   N
-CRC-32                4 B
-```
+- no GTS ACK;
+- no retransmission;
+- no GTS receive credit;
+- no guaranteed delivery;
+- no guaranteed ordering unless the Sequenced option is enabled.
 
-Fixed GTS overhead is 10 bytes.
+A receiver unable to accept a valid DATAGRAM may discard it.
 
-GTS provides no acknowledgement, retransmission, duplicate suppression, ordering, or loss detection for these packets.
+### Unsequenced unreliable
 
-## Unreliable Variable
+With `Sequenced = 0`, DATAGRAM carries no Sequence field. GTS does not detect loss, reordering, or duplication.
 
-Unreliable Variable permits each DATAGRAM packet to choose any GDP Size Class up to the stream's negotiated maximum.
+### Sequenced unreliable
 
-Because the selected GDP class may exceed the amount of application data, the packet carries a 16-bit Valid Length:
+With `Sequenced = 1`, every DATAGRAM carries a 32-bit Sequence field.
 
-```text
-Version/Type          1 B
-Tunnel ID             4 B
-Stream ID             1 B
-Valid Length          2 B
-Data                   N
-Padding                P
-CRC-32                4 B
-```
+Sequence starts at zero independently in each permitted sending direction and increments by one per DATAGRAM. There are still no ACKs or retransmissions.
 
-Fixed GTS overhead is 12 bytes.
+The receiver uses the sequence to identify newer versus duplicate/stale datagrams. Duplicate or stale datagrams MUST NOT be delivered. Missing sequence numbers indicate loss but do not trigger GTS recovery.
 
-There is no GTS sequence number, ACK, receive credit, retransmission, duplicate suppression, or reordering. Applications that need timestamps, media sequence numbers, epochs, or application-specific loss detection carry those fields in their own payload.
+This profile is intended for media, telemetry, state updates, and similar traffic where freshness matters more than recovery.
 
-## GTS receive credit
+## Fixed and Variable unreliable
 
-GTS Receive Credit applies only to reliable streams.
+Unreliable Fixed uses one exact GDP Size Class and carries no Valid Length.
 
-For unreliable streams:
+Unreliable Variable may choose any GDP Size Class up to the negotiated maximum and carries a 16-bit Valid Length. Remaining bytes before CRC are zero padding.
 
-- Initial Receive Credit in CONNECT/CONNECT_ACK or STREAM_OPEN/STREAM_ACK MUST be zero;
-- ACK packets MUST NOT be generated for the stream;
-- a receiver that cannot accept a valid DATAGRAM may discard it.
+Sequenced and Variable are independent; all four unreliable combinations are valid.
 
-This does not remove lower-layer GNet hop-local credit/backpressure. GTS unreliable delivery is unreliable at the end-to-end transport layer; adjacent GNet forwarding endpoints still obey the normal link/data-path capacity rules.
+## Unchecked Payload
 
-## ACK behavior
+`Unchecked Payload = 1` is valid only when `Unreliable = 1`.
 
-The existing ACK format is unchanged and valid only for reliable streams:
+The CRC-32 field remains present and MUST still validate all transport metadata. The application payload bytes and zero padding are excluded from CRC calculation.
+
+The protected CRC input still includes:
 
 ```text
-Version/Type          1 B
-Tunnel ID             4 B
-Stream ID             1 B
-ACK Base              4 B
-Receive Bitmap        4 B
-Receive Credit        1 B
-Reserved              1 B
-CRC-32                4 B
+canonical GDP pseudo-header
+GTS Version/Type
+Tunnel ID
+Stream ID
+Sequence, when present
+Valid Length, when present
 ```
 
-Reliable Fixed and Reliable Variable both use the same packet-oriented sequence and selective-repeat ACK model.
+The unchecked region is:
 
-Unreliable Fixed and Unreliable Variable never generate GTS ACKs for DATAGRAM delivery.
+```text
+application payload
+zero padding
+```
 
-## DATA_END and stream close
+This allows damaged media payload to be delivered while preventing corruption of tunnel selection, stream selection, packet type, sequence, or payload length from being accepted as valid transport metadata.
 
-Reliable streams use DATA_END as the sequenced final partial data packet in one sending direction.
+`Unchecked Payload = 0` means CRC-32 covers the complete GTS header, application payload, and padding as normal.
 
-Unreliable streams do not use DATA_END. Every DATAGRAM is independently bounded by GDP Size Class and, for Variable mode, Valid Length.
+Reliable streams MUST use full payload coverage.
 
-STREAM_CLOSE remains the directional state-retirement operation for all stream profiles:
+## Receive credit and direction
 
-- reliable stream: `Final Sequence` identifies the final reliable packet and STREAM_CLOSE_ACK confirms receipt through that sequence;
-- unreliable stream: `Final Sequence` MUST be zero and has no delivery meaning; STREAM_CLOSE/STREAM_CLOSE_ACK only synchronizes retirement of stream state and does not imply delivery of prior datagrams.
+GTS Receive Credit applies only to reliable application-data directions.
+
+For unreliable streams, all Initial Receive Credit fields MUST be zero.
+
+For reliable unidirectional streams:
+
+```text
+Direction 01   opener -> peer
+               opener receive credit = 0
+               peer receive credit may be non-zero
+
+Direction 10   peer -> opener
+               opener receive credit may be non-zero
+               peer receive credit = 0
+
+Direction 11   both directions
+               both sides may advertise receive credit
+```
+
+Lower-layer GNet hop-local credit/backpressure remains independent and mandatory.
 
 ## Stream establishment
 
-CONNECT creates Stream 0 using the supplied Stream Parameters byte.
+CONNECT creates Stream 0 and carries the Stream Profile. STREAM_OPEN creates an additional stream and carries the same 16-bit Stream Profile format.
 
-STREAM_OPEN creates an additional stream using the same Stream Parameters format.
+The receiver either accepts the proposed profile or rejects it. Baseline GTS does not counter-negotiate individual profile bits.
 
-The receiver may reject an unsupported profile. CONNECT_ACK and STREAM_ACK status `6` means **unsupported stream profile**.
+CONNECT_ACK / STREAM_ACK status `6` means unsupported stream profile.
 
-The accepted profile is symmetric for the stream in the baseline: both directions use the same reliability mode, fixed/variable rule, and Size Class or maximum Size Class.
+## Graceful close
 
-## Integrity
+STREAM_CLOSE is directional.
 
-The baseline defined here retains the existing GTS CRC-32-GNET integrity trailer for reliable and unreliable data packets. Unreliable means no delivery/retransmission guarantee; it does not mean unchecked corruption.
+For reliable streams, Final Sequence identifies the final reliable message packet in that sending direction. STREAM_CLOSE_ACK confirms receipt through that sequence.
 
-Alternative integrity coverage for unreliable media is a separate design decision and is not defined by this profile document.
+For unreliable streams, Final Sequence MUST be zero and has no delivery meaning. STREAM_CLOSE/STREAM_CLOSE_ACK only synchronize retirement of that direction's state.
+
+## Immediate stream reset
+
+STREAM_RESET immediately terminates one stream in both directions without destroying its tunnel or sibling streams. Outstanding reliable packets, ACK state, receive state, and queued undelivered messages for that stream are discarded.
+
+STREAM_RESET_ACK confirms that the peer has retired the stream. Repeated STREAM_RESET packets for the same retired stream are idempotent during the stale-state guard interval.
+
+No per-stream Reset ID is required; tunnel participation, receiver-local Tunnel ID, Stream ID, GTS CRC and stale-state protection are sufficient for the baseline.
