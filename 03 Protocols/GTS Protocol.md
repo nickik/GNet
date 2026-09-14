@@ -7,13 +7,13 @@ status: frozen
 layers: ["L4","L5"]
 tags: ["gnet","gnet/protocol","gnet/status/frozen","gnet/layer/l4","gnet/layer/l5"]
 parent: "[[Protocols MOC]]"
-related: ["[[GTS Transport Packets]]","[[Transport and Flows]]","[[ADR-0005 Tunnels and Streams]]","[[ADR-0018 GDP Header CRC and Local 16-bit Form]]"]
-updated: 2026-09-11
+related: ["[[GTS Transport Packets]]","[[Transport and Flows]]","[[Canonical Service Selector]]","[[ADR-0005 Tunnels and Streams]]","[[ADR-0018 GDP Header CRC and Local 16-bit Form]]"]
+updated: 2026-09-14
 ---
 # GNet Transport and Session Protocol (GTS)
 
 > [!info] Knowledge graph
-> **Up:** [[Protocols MOC]] · [[GTS Transport Packets]] · [[Transport and Flows]]
+> **Up:** [[Protocols MOC]] · [[GTS Transport Packets]] · [[Transport and Flows]] · [[Canonical Service Selector]]
 
 Status: **FROZEN initial traditional packet-routed protocol; timing constants and conformance vectors remain**
 
@@ -107,7 +107,9 @@ A bitmap-visible hole is retransmitted immediately. A retransmission timeout rem
 
 ## CONNECT and Stream 0
 
-CONNECT creates the tunnel and Stream 0 in one exchange. It carries:
+CONNECT creates the tunnel, selects exactly one logical service, and simultaneously creates Stream 0.
+
+It carries:
 
 ```text
 Version/Type              1 B
@@ -115,11 +117,24 @@ Initiator Receive Tunnel  4 B
 Initiator Reset ID        4 B
 Stream-0 Size Class       1 B
 Initial Receive Credit    1 B
-Selector Class/Reserved   1 B
-Service Selector          variable
+CSS Representation/Res.   1 B
+CSS Selector              1/4/16 B
 Padding                   P
 CRC-32                    4 B
 ```
+
+The high two bits of `CSS Representation/Reserved` select the [[Canonical Service Selector]] wire representation; the low six bits are zero/reserved:
+
+```text
+00  Registered-8   1 byte
+01  Short-32       4 bytes
+10  Full-128      16 bytes
+11  Reserved
+```
+
+All three representations identify values in one canonical 128-bit CSS namespace. Registered-8 expands through [[CSS Registered Service Registry]] to a four-character Short-32 value; Short-32 occupies the most-significant 32 bits of CSS128 with the remaining 96 bits zero. The shortest available representation is the canonical wire form.
+
+On successful CONNECT, the tunnel is bound to the resulting canonical CSS for its lifetime. Stream 0 and all later streams belong to that selected service.
 
 CONNECT_ACK carries:
 
@@ -137,7 +152,7 @@ CRC-32                    4 B
 
 On accepted CONNECT, the responder returns the Tunnel ID that the initiator subsequently uses when sending to it. On rejection, responder Tunnel ID and Reset ID are zero and no tunnel is established.
 
-Initial CONNECT_ACK statuses are: `0` accepted, `1` service unavailable, `2` resource unavailable, `3` unsupported selector, `4` unsupported Stream-0 Size Class, `5` administratively rejected; all others reserved.
+Initial CONNECT_ACK statuses are: `0` accepted, `1` service unavailable, `2` resource unavailable, `3` unsupported or malformed CSS, `4` unsupported Stream-0 Size Class, `5` administratively rejected; all others reserved.
 
 ## Additional streams
 
@@ -151,7 +166,7 @@ Data Size Class          1 B
 Initial Receive Credit   1 B
 Reserved                 1 B
 Padding                  P
-CRC-32                   4 B
+CRC-32                    4 B
 ```
 
 STREAM_ACK carries:
@@ -164,12 +179,14 @@ Status                   1 B
 Initial Receive Credit   1 B
 Reserved                 1 B
 Padding                  P
-CRC-32                   4 B
+CRC-32                    4 B
 ```
 
 Initial STREAM_ACK statuses are: `0` accepted, `1` invalid/wrong-parity Stream ID, `2` Stream ID already in use, `3` resource unavailable, `4` unsupported Data Size Class, `5` administratively rejected; all others reserved.
 
 The initial profile assigns one fixed GDP DATA Size Class to each stream, used in both directions.
+
+STREAM_OPEN does **not** carry a CSS and cannot select or change service identity. It only creates an additional stream inside the service-bound tunnel. Selecting a different service requires a separate CONNECT/tunnel.
 
 ## Graceful close
 
@@ -225,7 +242,16 @@ Multi-byte integers are transmitted most-significant byte first. Unused bytes be
 
 ## Service selection
 
-Service selection is setup-only. Selector classes remain: `00` = 8-bit registered code; `01` = 32-bit short textual selector; `10` = 128-bit long/private selector; `11` reserved. Exact textual alphabet/packing remains to be frozen separately.
+Service selection is CONNECT-only and is defined by [[Canonical Service Selector]]. Presentation examples are:
+
+```text
+<GDP-address>:-FILE
+<GDP-address>:-GRPC
+<GDP-address>:#CAPI
+<GDP-address>:0123456789ABCDEF0123456789ABCDEF
+```
+
+The GDP address identifies the endpoint; CSS identifies the service at that endpoint. Ordinary DATA carries neither CSS nor a TCP-style port number.
 
 ## Explicitly deferred
 
@@ -238,4 +264,4 @@ Service selection is setup-only. Selector classes remain: `00` = 8-bit registere
 
 ## Remaining work
 
-The initial packet/control wire architecture is frozen. Remaining closure work is limited to exact delayed-ACK/RTO numerical constants, textual Service Selector character packing, detailed malformed-control error mappings, and golden packet/CRC/conformance vectors.
+The initial packet/control wire architecture is frozen. Remaining closure work is limited to exact delayed-ACK/RTO numerical constants, detailed malformed-control-packet reason mappings, and golden packet/CRC/conformance vectors.
