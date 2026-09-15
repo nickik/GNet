@@ -2,7 +2,7 @@
 
 Status: draft on branch `dynamic-topology-routing`.
 
-This revision deliberately defines a small forward-route-exchange protocol. It does **not** define a topology database, link-state flooding, or SPF/Dijkstra. Those may be introduced by a later revision if needed.
+This revision deliberately defines a small forward-route-exchange protocol. It does **not** define a topology database, link-state flooding, or SPF/Dijkstra. Routers discover direct neighbors with GCTL, exchange reachability, retain competing learned routes, and explicitly withdraw reachability after failure.
 
 ## Architecture
 
@@ -34,17 +34,15 @@ The forwarding plane, router egress scheduler, and DLP VC allocation remain sepa
 - RouterID is independent of all GDP interface addresses.
 - A router has one RouterID even if it has multiple interfaces or GDP prefixes.
 
-Random generation is used to avoid requiring a central RouterID authority in the first routing revision.
+Random generation avoids requiring a central RouterID authority in this revision.
 
 ## LinkID
 
 `LinkID` is an unsigned 64-bit non-zero identifier for a local router-to-router attachment.
 
-A LinkID identifies the attachment advertised by the sending router. The first revision does not require both ends of a physical link to use the same LinkID.
+A LinkID identifies the attachment advertised by the sending router. This revision does not require both ends of a physical link to use the same LinkID.
 
 ## Route origin
-
-The routing data model defines these route origins:
 
 | Wire value | Origin | Initial administrative preference |
 | ---: | --- | ---: |
@@ -63,20 +61,19 @@ The initial metric is one unsigned 32-bit scalar cost.
 
 - Lower metric is better.
 - Default link metric is `100`.
-- When learned routes are forwarded in Stage 3, the forwarding router adds the local link metric using saturating arithmetic.
+- When a route is advertised on a router link, the sender adds that outgoing link metric using saturating arithmetic.
 - This revision does not derive metric automatically from bandwidth or latency.
 
 ## GCTL routing message assignments
-
-This revision reserves three GCTL message type values:
 
 | Type | Name |
 | ---: | --- |
 | `0x40` | `ROUTER_HELLO` |
 | `0x41` | `ROUTER_HELLO_ACK` |
 | `0x42` | `ROUTE_ADVERTISE` |
+| `0x43` | `ROUTE_WITHDRAW` |
 
-All three use the normal 8-byte GCTL v1 header:
+All messages use the normal 8-byte GCTL v1 header:
 
 ```text
 0               1               2               3
@@ -103,7 +100,7 @@ Both messages use the same 24-byte body:
 +---------------------------------------------------------------+
 ```
 
-The complete encoded GCTL message is therefore 32 bytes.
+The complete encoded GCTL message is 32 bytes.
 
 Fields:
 
@@ -112,7 +109,7 @@ Fields:
 - `Hold Time`: requested neighbor liveness hold time in milliseconds.
 - `Link Metric`: scalar cost for reaching the sender over this attachment.
 
-Stage 1 defines the wire representation only. The Stage 2 adjacency state machine defines when HELLO and HELLO_ACK are transmitted and when a neighbor is declared down.
+A valid HELLO or HELLO_ACK establishes or refreshes the direct adjacency. When no valid refresh is seen for the peer-advertised hold time, the adjacency becomes `DOWN`.
 
 ## ROUTE_ADVERTISE
 
@@ -130,90 +127,116 @@ Stage 1 defines the wire representation only. The Stage 2 adjacency state machin
 +---------------------------------------------------------------+
 ```
 
+Rules:
+
+- `Advertising RouterID` MUST be the RouterID of the direct neighbor that transmitted this message and MUST be non-zero.
+- GDP prefix lengths are `0..64`.
+- The GDP prefix network MUST be canonical: all host bits after `Prefix Len` are zero.
+- `Origin` uses the route-origin table above.
+- Static and Escape routes MUST NOT be imported from another router in this revision.
+- The 16 reserved bits MUST be zero when sent and MUST be rejected when non-zero.
+- `Metric` is the sender's advertised total scalar cost to the prefix, including the sender's outgoing-link cost toward the receiver.
+
+The first revision advertises one prefix per message.
+
+## ROUTE_WITHDRAW
+
+`ROUTE_WITHDRAW` removes reachability previously learned from the sending neighbor. It also uses a fixed 24-byte body:
+
+```text
++---------------------------------------------------------------+
+|               Withdrawing RouterID (64 bits)                  |
++---------------------------------------------------------------+
+|                 GDP Prefix Network (64 bits)                  |
++---------------------------------------------------------------+
+| Prefix Len (8)  |             Reserved = 0 (56)               |
++---------------------------------------------------------------+
+```
+
 The complete encoded GCTL message is 32 bytes.
 
 Rules:
 
-- `Advertising RouterID` MUST be non-zero.
-- GDP prefix lengths are `0..64`.
-- The GDP prefix network MUST be canonical: all host bits after `Prefix Len` are zero.
-- `Origin` uses the route-origin table above.
-- The 16 reserved bits MUST be zero when sent and MUST be rejected when non-zero in this revision.
-- `Metric` is an unsigned 32-bit scalar cost.
+- `Withdrawing RouterID` MUST be the RouterID of the direct neighbor that transmitted the message and MUST be non-zero.
+- The GDP prefix MUST be canonical.
+- All seven reserved bytes MUST be zero when sent and MUST be rejected when non-zero.
+- A withdrawal removes only the learned candidate for that prefix whose `learned_from` RouterID equals the sender. It MUST NOT remove connected, static, or candidates learned from other neighbors.
+- Receiving a withdrawal for a route that is already absent is idempotent and MUST NOT create an error condition.
 
-The first revision advertises one prefix per message. Route aggregation or multiple-prefix packing is deliberately deferred.
+## Neighbor discovery
 
-## Stage 2 — Neighbor discovery
+The initial adjacency state remains intentionally small:
 
-The next stage remains intentionally small:
-
-- `DOWN -> UP` neighbor state only.
+- `DOWN -> UP` only.
 - Send `ROUTER_HELLO` on router links.
-- Return `ROUTER_HELLO_ACK`.
-- Store RouterID, local port, local/remote LinkID, neighbor GDP address, metric, and hold timer.
-- Expire the neighbor when the hold timer elapses.
+- Return `ROUTER_HELLO_ACK` using the same transaction ID.
+- Store RouterID, local/remote LinkID association, metric, peer hold time, and last-seen time.
+- Expire the neighbor when its hold timer elapses.
+- A later valid HELLO/ACK may bring the adjacency back `UP`.
 
 No topology database is required.
 
-## Stage 3 — Forward route exchange + RIB/FIB
+## Forward route exchange + RIB/FIB
 
 Routers exchange routes directly rather than exchanging a complete topology graph.
 
 - Advertise connected routes.
-- Forward learned routes to other neighbors.
+- Forward selected learned routes to other neighbors.
 - Add the outgoing link metric before forwarding.
 - Apply split horizon: a learned route is not advertised back toward the neighbor from which it was learned.
 - Store the neighbor RouterID from which each learned route was received.
+- Keep competing learned candidates from different neighbors so an alternate route can already be present when the preferred path fails.
 - Prefer lower total metric among otherwise equivalent learned routes.
 - Break equal learned-route metric ties by lower RouterID for deterministic behavior.
 - Maintain competing Connected, Static, and Learned routes in the RIB.
 - Install only selected routes in the FIB.
 - Keep static routes available as policy overrides/fallbacks.
 
-A later message assignment may add explicit `ROUTE_WITHDRAW`; Stage 4 should define it before failure/reconvergence is implemented.
+## Failure and reconvergence
 
-## Stage 4 — Failure + reconvergence
+When a direct adjacency goes `DOWN`:
 
-The target behavior is:
+1. Remove every learned route whose `learned_from` is that neighbor.
+2. Re-select the local RIB/FIB immediately; a retained alternate learned route may become active without waiting for new discovery.
+3. For each prefix whose candidate set changed, generate a triggered update toward each remaining neighbor:
+   - if the currently selected route may be advertised to that neighbor, send a fresh `ROUTE_ADVERTISE`;
+   - otherwise send `ROUTE_WITHDRAW`.
+4. Apply the same rule when a `ROUTE_WITHDRAW` is received from a neighbor.
+5. Rebuild/program the forwarding table before forwarding subsequent traffic using the changed route.
+
+This gives the failure chain:
 
 ```text
-neighbor/link failure
-        |
-        v
+link/hold failure
+      |
+      v
 neighbor DOWN
-        |
-        v
-routes learned from neighbor removed
-        |
-        v
-withdrawal propagated
-        |
-        v
-RIB/FIB reselected
-        |
-        v
-traffic uses alternate route
+      |
+      v
+remove routes learned from neighbor
+      |
+      v
+RIB/FIB select retained alternate (if any)
+      |
+      v
+trigger ADVERTISE or WITHDRAW to remaining neighbors
+      |
+      v
+traffic follows replacement route
 ```
 
-The exact withdrawal wire format is deferred until Stage 4.
+Split horizon still applies to triggered advertisements. A triggered withdrawal may be sent where the current selected route is not advertisable to that neighbor, which explicitly clears reachability that neighbor may have learned earlier.
+
+When a failed adjacency returns `UP`, normal advertisements are exchanged again. Deterministic metric/RouterID selection therefore converges back to the preferred route when it is again the best candidate.
 
 ## Deferred
 
 - Link-state topology database.
 - SPF/Dijkstra.
 - ECMP and unequal-cost multipath.
+- Hold-down timers, route poisoning, and poisoned reverse.
 - Congestion-aware/adaptive routing.
 - Up*/down* or another deadlock-free escape topology algorithm.
 - Detailed VC0 escape forwarding behavior.
 - Routing hierarchy/areas.
 - Cryptographic routing authentication.
-
-## Stage 1 conformance requirement
-
-An implementation of Stage 1 must demonstrate:
-
-1. non-zero randomly generated 64-bit RouterIDs;
-2. stable RouterID, LinkID, route-origin, and metric data types;
-3. exact 32-byte HELLO, HELLO_ACK, and ROUTE_ADVERTISE wire images;
-4. encode/decode round trips;
-5. rejection of malformed lengths, zero IDs, non-canonical prefixes, unknown route origins, and non-zero reserved bits.
